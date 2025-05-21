@@ -62,19 +62,19 @@ ipcMain.on('minimizeApp', () => {
   if (mainWindow) mainWindow.minimize();
 });
 
-// get yt video info with url arg
-ipcMain.on('videoInfo', async (event, url) => {
-  console.log('Received URL:', url);
+// get yt video info with url arg and requestId
+ipcMain.on('videoInfo', async (event, url, requestId) => {
+  console.log('Received URL:', url, 'RequestId:', requestId);
   const YoutubeVideoDetails = require('./helpers/ytdl.js');
   const youtube = new YoutubeVideoDetails();
 
   try {
     const details = await youtube.getVideoDetails(url);
     console.log('Video details:', details);
-    event.reply('videoInfoResponse', details); // Use event.reply instead of event.sender.send
+    event.reply('videoInfoResponse', details, requestId); // Pass requestId back
   } catch (error) {
     console.error('Error:', error);
-    event.reply('videoInfoError', error.message);
+    event.reply('videoInfoError', error.message, requestId); // Pass requestId back
   }
 });
 

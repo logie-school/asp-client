@@ -3,7 +3,7 @@
 import { SectionWrapper } from "../section-wrapper";
 import "./download.css";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,9 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge"
 
-import { DownloadIcon, MoveUpRight, InfoIcon, SlidersVertical, Loader } from "lucide-react";
+import { DownloadIcon, MoveUpRight, InfoIcon, SlidersVertical, Loader, Eye, ThumbsUp, DotIcon } from "lucide-react";
 
 interface DownloadProps {
   active?: boolean;
@@ -45,6 +45,7 @@ export function Download({ active }: DownloadProps) {
   
   const [videoUrl, setVideoUrl] = useState("");
   const [downloadButtonActive, setDownloadButtonActive] = useState(false);
+  const [infoButtonActive, setInfoButtonActive] = useState(false);
   const [videoTitle, setVideoTitle] = useState("Video Title");
   const [videoDescription, setVideoDescription] = useState("lorem ipsum dolor sit amet consectetur...");
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
@@ -53,53 +54,80 @@ export function Download({ active }: DownloadProps) {
   const [open, setOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  // Track the latest request
+  const requestIdRef = useRef(0);
+
   const handleURLChange = (url: string) => {
     setVideoUrl(url);
-    
+    setImageLoaded(false);
+
     if (url) {
       setIsLoading(true);
       setAvgColor(defaultBgColor);
-      setDownloadButtonActive(false); // Reset while loading
+      setDownloadButtonActive(false);
+      setInfoButtonActive(false);
+
+      // Set loading state for title and description
+      setVideoTitle("Loading...");
+      setVideoDescription("Loading video details...");
+
+      // Increment requestId for each new request
+      requestIdRef.current += 1;
+      const thisRequestId = requestIdRef.current;
+
       if (typeof window !== 'undefined') {
-        console.log("Sending URL to main process:", url);
-        window.api.send("videoInfo", url);
+        window.api.send("videoInfo", url, thisRequestId);
       }
     } else {
       setDownloadButtonActive(false);
+      setInfoButtonActive(false);
       setVideoDetails(null);
-      setVideoTitle("Video Title"); // Reset title
-      setVideoDescription(""); // Reset description
+      setVideoTitle("Video Title");
+      setVideoDescription("");
       setAvgColor(defaultBgColor);
       setIsLoading(false);
+      setImageLoaded(false);
     }
   };
 
-  // Move window-dependent code into useEffect
   useEffect(() => {
-    // Set up event listeners when component mounts
     if (typeof window !== 'undefined') {
-      // Clean up previous listeners
-      const errorHandler = (error: string) => {
-        console.error("Error fetching video info:", error);
-        toast.error(error);
+      const errorHandler = (error: string, responseRequestId?: number) => {
+        // Only handle error if it's for the latest request
+        if (responseRequestId !== undefined && responseRequestId !== requestIdRef.current) return;
         setVideoDetails(null);
         setDownloadButtonActive(false);
+        setInfoButtonActive(false);
         setIsLoading(false);
+        setImageLoaded(false);
+        toast.error(error);
       };
 
-      const responseHandler = (details: VideoDetails) => {
-        console.log("Video Info received:", details);
-        if (details && details.title) { // Add validation for required fields
+      const responseHandler = (details: VideoDetails, responseRequestId?: number) => {
+        // Only handle response if it's for the latest request
+        if (responseRequestId !== undefined && responseRequestId !== requestIdRef.current) return;
+        if (!videoUrl) {
+          setVideoDetails(null);
+          setDownloadButtonActive(false);
+          setInfoButtonActive(false);
+          setIsLoading(false);
+          setImageLoaded(false);
+          return;
+        }
+        if (details && details.title) {
           setVideoDetails(details);
           setVideoTitle(details.title || "Video Title");
           setVideoDescription(details.description || "No description available");
           setIsLoading(false);
-          setDownloadButtonActive(true); // Set active after successful response
+          setDownloadButtonActive(true);
+          setInfoButtonActive(true);
         } else {
-          toast.error("Invalid video data received");
           setVideoDetails(null);
           setDownloadButtonActive(false);
+          setInfoButtonActive(false);
           setIsLoading(false);
+          setImageLoaded(false);
+          toast.error("Invalid video data received");
         }
       };
 
@@ -107,14 +135,13 @@ export function Download({ active }: DownloadProps) {
       window.api.receive("videoInfoResponse", responseHandler);
 
       return () => {
-        // Remove listeners if possible
         if (window.api.removeListener) {
           window.api.removeListener("videoInfoError", errorHandler);
           window.api.removeListener("videoInfoResponse", responseHandler);
         }
       };
     }
-  }, []); // Empty dependency array means this runs once on mount
+  }, [videoUrl]);
 
   const getAverageColor = (img: HTMLImageElement) => {
     const canvas = document.createElement('canvas');
@@ -146,6 +173,18 @@ export function Download({ active }: DownloadProps) {
     return `/api/proxy?url=${encodeURIComponent(url)}`;
   };
 
+  function roundNumber(num: number): string {
+    if (num >= 1_000_000_000) {
+      return `${Math.floor(num / 1_000_000_000)}b`;
+    } else if (num >= 1_000_000) {
+      return `${Math.floor(num / 1_000_000)}m`;
+    } else if (num >= 1_000) {
+      return `${Math.floor(num / 1_000)}k`;
+    } else {
+      return num.toString();
+    }
+  }
+
   return (
     <div className="w-full h-full flex flex-row absolute" suppressHydrationWarning>
       <SectionWrapper active={active}>
@@ -156,6 +195,23 @@ export function Download({ active }: DownloadProps) {
               <div className="section-title-wrapper flex flex-row items-center justify-between gap-2 mb-4 flex-shrink-0">
                 <div className="section-title-icon-wrapper flex flex-row items-center gap-2">
                   <div className="section-title text-lg font-medium">{videoTitle}</div>
+
+                  <div className="flex gap-2">
+                    {videoDetails && !isLoading && (
+                      <>
+                        <DotIcon className="opacity-20 ml-2" />
+
+                        <Badge variant={'outline'} style={{ height: "fit-content"}}>
+                          <Eye/>
+                          {roundNumber(videoDetails.viewCount)}
+                        </Badge>
+                        <Badge variant={'outline'} style={{ height: "fit-content"}}>
+                          <ThumbsUp />
+                          {roundNumber(videoDetails.likeCount)}
+                        </Badge>
+                      </>
+                    )}
+                  </div>
                 </div>
                   <div>
                     <motion.div
@@ -163,7 +219,7 @@ export function Download({ active }: DownloadProps) {
                       onClick={() => setOpen(true)}
                       whileHover={{ backgroundColor: "#fff1" }}
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      className="cursor-pointer rounded-xl p-2 shadow-md flex-shrink-0 project-modal"
+                      className={`${!infoButtonActive ? '!opacity-50 pointer-events-none' : ''} cursor-pointer rounded-xl p-2 shadow-md flex-shrink-0 project-modal`}
                     >
                       <div className="gap-2 flex flex-col">
                         <InfoIcon size={20} />
@@ -190,7 +246,7 @@ export function Download({ active }: DownloadProps) {
                           >
                             <div className="flex items-start gap-4 flex-col justify-between">
                               {videoDetails && (
-                                <motion.div className="flex items-start gap-4 flex-col justify-between">
+                                <motion.div className="flex items-start gap-4 flex-col justify-between relative">
                                   <h2 className="text-2xl font-medium">{videoDetails.title}</h2>
                                   <span className="opacity-50 whitespace-pre-wrap">
                                     {videoDetails.description.split('\n').map((line, i) => (
@@ -200,6 +256,18 @@ export function Download({ active }: DownloadProps) {
                                       </React.Fragment>
                                     ))}
                                   </span>
+
+                                    <div className="flex gap-2">
+                                    <Badge variant={'outline'} style={{ height: "fit-content"}}>
+                                      <Eye/>
+                                      {roundNumber(videoDetails.viewCount)}
+                                    </Badge>
+                                    <Badge variant={'outline'} style={{ height: "fit-content"}}>
+                                      <ThumbsUp />
+                                      {roundNumber(videoDetails.likeCount)}
+                                    </Badge>
+                                    </div>
+
                                   <a 
                                     className="whitespace-nowrap group" 
                                     href={videoDetails.channelUrl} 
@@ -379,6 +447,7 @@ export function Download({ active }: DownloadProps) {
                     exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="absolute inset-0 flex items-center justify-center"
+                    onClick={() => {toast('test')}}
                   >
                     <DownloadIcon />
                   </motion.div>

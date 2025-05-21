@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('api', {
       'videoInfo',
     ];
     if (validChannels.includes(channel)) {
-      ipcRenderer.send(channel, ...args);
+      ipcRenderer.send(channel, ...args); // Already passes all args, including requestId
     }
   },
   receive: (channel, func) => {
@@ -19,10 +19,8 @@ contextBridge.exposeInMainWorld('api', {
       'videoInfoError',
     ];
     if (validChannels.includes(channel)) {
-      // Remove existing listeners
       ipcRenderer.removeAllListeners(channel);
-      // Add new listener
-      ipcRenderer.on(channel, (event, ...args) => func(...args));
+      ipcRenderer.on(channel, (event, ...args) => func(...args)); // Already passes all args, including requestId
     }
   },
   removeListener: (channel, func) => {
