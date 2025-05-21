@@ -1,0 +1,13 @@
+.active-section {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    z-index: 10;
+}
+
+.inactive-section {
+    pointer-events: none !important;
+    opacity: 0 !important;
+    transform: translateX(10px) !important;
+    z-index: 0;
+}

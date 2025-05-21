@@ -1,0 +1,57 @@
+.scroll-decoration {
+    display: none;
+}
+
+.editor-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevents scrollbars from appearing unnecessarily */
+}
+
+.monaco-editor { position: absolute !important; }
+
+.scrollbar .slider:active {
+    transition: none !important;
+}
+
+
+.monaco-menu {
+    background-color: #0a0a0a !important;
+    border-radius: 5px !important;
+    box-shadow: 0px 0px 20px #00000055 !important;
+    border: 1px solid #ffffff55 !important;
+}
+
+.action-menu-item {
+    transition: 0.2s cubic-bezier(0,.75,.27,1) !important;
+}
+
+.focused .action-menu-item {
+    transition: 0.2s cubic-bezier(0,.75,.27,1) !important;
+}
+
+
+.action-menu-item:hover {
+    transition: 0.2s cubic-bezier(0,.75,.27,1) !important;
+}
+
+.action-menu-item:active {
+    opacity: 0.5 !important;
+    transition: 0s !important;
+}
+
+.action-menu-item .action-label {
+    transform: translateX(0px);
+    transition: 0.2s cubic-bezier(0,.75,.27,1) !important;
+}
+
+.action-menu-item:hover .action-label {
+    transform: translateX(10px);
+    transition: 0.2s cubic-bezier(0,.75,.27,1) !important;
+}
+
+.slider::before {
+    display: none;
+}

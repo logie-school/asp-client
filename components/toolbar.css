@@ -1,0 +1,35 @@
+.toolbar-button {
+    height: 32px;
+    width: 46px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: 0.2s;
+}
+
+.toolbar-button:hover {
+    background-color: #ffffff22;
+    transition: 0.2s;
+}
+
+.toolbar-button:active {
+    opacity: 0.5;
+    transition: 0s;
+}
+
+#closeButton:hover {
+    background-color: #ff2f2f !important;
+    color: white;
+}
+
+.title {
+    font-family: "Special Gothic Expanded One", sans-serif;
+}
+
+.version {
+    font-size: 12px;
+}
+
+body {
+    font-family: "Poppins", sans-serif;
+}

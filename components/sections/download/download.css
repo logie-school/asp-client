@@ -1,0 +1,47 @@
+.prefs-item {
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.prefs-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.prefs-title-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.prefs-item-title {
+    font-size: 14px;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.prefs-item-desc {
+    font-size: 12px;
+    color: #ffffff99;
+    width: 80%;
+}
+
+.prefs-sub-sect {
+    border-top: 1px solid #ffffff11;
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+.project-modal {
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Hide WebKit scrollbar */
+.project-modal::-webkit-scrollbar {
+    display: none;
+}

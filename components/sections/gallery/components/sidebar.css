@@ -1,0 +1,21 @@
+/* Customize the scrollbar for the sidebar */
+[data-sidebar="content"]::-webkit-scrollbar {
+    width: 15px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 10px 10px transparent;
+    border: solid 5px transparent;
+}
+  
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+    box-shadow: inset 0 0 10px 10px #ffffff1a;
+    border: solid 5px transparent;
+    border-radius: 10px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+    box-shadow: inset 0 0 10px 10px #ffffff33;
+    border: solid 5px transparent;
+    border-radius: 10px;
+}
