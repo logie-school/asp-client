@@ -45,3 +45,12 @@
 .project-modal::-webkit-scrollbar {
     display: none;
 }
+
+.prefs::-webkit-scrollbar {
+    width: 4px;
+}
+
+.prefs::-webkit-scrollbar-thumb {
+    background: #ffffff11;
+    border-radius: 10px;
+}   

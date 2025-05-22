@@ -48,10 +48,10 @@ export function Settings({ active }: SettingsProps) {
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={activeSection}
-                    initial={{ opacity: 0, y: 24 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -24 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.1, ease: "easeInOut" }}
                     className="absolute inset-0 w-full h-full"
                   >
                     <ActiveSectionComponent />

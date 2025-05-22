@@ -18,6 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 
 import { DownloadIcon, MoveUpRight, InfoIcon, SlidersVertical, Loader, Eye, ThumbsUp, DotIcon } from "lucide-react";
@@ -43,12 +49,20 @@ export function Download({ active }: DownloadProps) {
   const defaultBgColor = "#1f1f1f";
   const [avgColor, setAvgColor] = useState(defaultBgColor);
 
+
   const [videoUrl, setVideoUrl] = useState("");
   const [downloadButtonActive, setDownloadButtonActive] = useState(false);
   const [infoButtonActive, setInfoButtonActive] = useState(false);
   const [videoTitle, setVideoTitle] = useState("Video Title");
   const [videoDescription, setVideoDescription] = useState("lorem ipsum dolor sit amet consectetur...");
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
+
+  const [previewPreference, setPreviewPreference] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("previewPreference") || "image";
+    }
+    return "image";
+  });
 
   // Load from localStorage or use default values
   const [downloadPreference, setDownloadPreference] = useState(() => {
@@ -82,6 +96,12 @@ export function Download({ active }: DownloadProps) {
       localStorage.setItem("typePreference", typePreference);
     }
   }, [typePreference]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("previewPreference", previewPreference);
+    }
+  }, [previewPreference]);
 
   const handleURLChange = (url: string) => {
     setVideoUrl(url);
@@ -201,14 +221,18 @@ export function Download({ active }: DownloadProps) {
 
   function roundNumber(num: number): string {
     if (num >= 1_000_000_000) {
-      return `${Math.floor(num / 1_000_000_000)}b`;
+      return `${Math.floor(num / 1_000_000_000)}B+`;
     } else if (num >= 1_000_000) {
-      return `${Math.floor(num / 1_000_000)}m`;
+      return `${Math.floor(num / 1_000_000)}M+`;
     } else if (num >= 1_000) {
-      return `${Math.floor(num / 1_000)}k`;
+      return `${Math.floor(num / 1_000)}K+`;
     } else {
       return num.toString();
     }
+  }
+
+  function commaNumber(num: number): string {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
   return (
@@ -261,6 +285,21 @@ export function Download({ active }: DownloadProps) {
                       )}
                     </AnimatePresence>
 
+                    {videoDetails && !isLoading ? (
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key="dot"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.25 }}
+                      >
+                        <DotIcon className="opacity-20" />
+                      </motion.div>
+                    </AnimatePresence>
+                    ) : null}
+
+
                     <AnimatePresence mode="wait">
                       {videoDetails && !isLoading ? (
                         <motion.div
@@ -271,15 +310,35 @@ export function Download({ active }: DownloadProps) {
                           transition={{ duration: 0.25 }}
                           className="flex gap-2"
                         >
-                          <DotIcon className="opacity-20 mr-2" />
-                          <Badge variant={'outline'} style={{ height: "fit-content"}}>
-                            <Eye/>
-                            {roundNumber(videoDetails.viewCount)}
-                          </Badge>
-                          <Badge variant={'outline'} style={{ height: "fit-content"}}>
-                            <ThumbsUp />
-                            {roundNumber(videoDetails.likeCount)}
-                          </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                              <Eye/>
+                              {roundNumber(videoDetails.viewCount)}
+                            </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>{commaNumber(videoDetails.viewCount)} views</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                              <ThumbsUp />
+                              {roundNumber(videoDetails.likeCount)}
+                            </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>{commaNumber(videoDetails.likeCount)} likes</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+
                         </motion.div>
                       ) : null}
                     </AnimatePresence>
@@ -329,14 +388,33 @@ export function Download({ active }: DownloadProps) {
                                     </span>
 
                                       <div className="flex gap-2">
-                                      <Badge variant={'outline'} style={{ height: "fit-content"}}>
-                                        <Eye/>
-                                        {roundNumber(videoDetails.viewCount)}
-                                      </Badge>
-                                      <Badge variant={'outline'} style={{ height: "fit-content"}}>
-                                        <ThumbsUp />
-                                        {roundNumber(videoDetails.likeCount)}
-                                      </Badge>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger>
+                                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                                              <Eye/>
+                                              {roundNumber(videoDetails.viewCount)}
+                                            </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>{commaNumber(videoDetails.viewCount)} views</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger>
+                                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                                              <ThumbsUp />
+                                              {roundNumber(videoDetails.likeCount)}
+                                            </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>{commaNumber(videoDetails.likeCount)} likes</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                       </div>
 
                                     <a 
@@ -421,7 +499,7 @@ export function Download({ active }: DownloadProps) {
             
               </div>
 
-                <div className="w-full border bg-input/30 border-input group rounded-md shadow-sm p-2 flex flex-row gap-4 items-center">
+                {/* <div className="w-full border bg-input/30 border-input group rounded-md shadow-sm p-2 px-3 flex flex-row gap-4 items-center">
                   <span>0:00</span>
                   <div className="w-full h-[5px] bg-input rounded relative">
                     <div className="w-[20%] bg-white h-[5px] rounded absolute flex items-center justify-end">
@@ -429,7 +507,7 @@ export function Download({ active }: DownloadProps) {
                     </div>
                   </div>
                   <span>3:43</span>
-                </div>
+                </div> */}
 
             </div>
 
@@ -488,6 +566,30 @@ export function Download({ active }: DownloadProps) {
                     </div>
                   </div>
                 </div>
+
+
+                {/* <div className="prefs-item">
+                  <div className="prefs-item-content">
+                    <div className="prefs-title-wrapper">
+                      <div className="prefs-item-title">Preview</div>
+                      <div className="prefs-item-desc">Change the in app preview.</div>
+                    </div>
+                    <div className="prefs-item-value">
+                      <Select value={previewPreference} onValueChange={(value) => setPreviewPreference(value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Preview Preference</SelectLabel>
+                            <SelectItem value="image">Image</SelectItem>
+                            <SelectItem value="video">Video</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div> */}
 
               </div>
             </div>

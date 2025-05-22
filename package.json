@@ -25,11 +25,12 @@
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-separator": "^1.1.4",
     "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-tooltip": "^1.2.4",
+    "@radix-ui/react-tooltip": "^1.2.7",
     "@tanstack/react-table": "^8.21.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^9.1.2",
+    "ffmpeg-static": "^5.2.0",
     "framer-motion": "^12.6.5",
     "lucide-react": "^0.487.0",
     "monaco-editor": "^0.52.2",
@@ -75,5 +76,13 @@
     "webpack": "^5.99.7",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.1"
+  },
+  "build": {
+    "extraResources": [
+      {
+        "from": "node_modules/ffmpeg-static/ffmpeg",
+        "to": "ffmpeg"
+      }
+    ]
   }
 }

@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// // read theme from local storage
+// const settings = typeof window !== "undefined" ? localStorage.getItem("settings") : null;
+// const theme = settings ? JSON.parse(settings).appearance.theme : "system";
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +36,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark">
+        <ThemeProvider attribute="class" defaultTheme='dark'>
           <Toolbar />
             {children}
           <Toaster position="top-center" richColors />

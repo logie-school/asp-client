@@ -194,3 +194,13 @@ body {
   margin: 0;
   overflow: hidden;
 }
+
+@font-face {
+  font-family: 'figtree';
+  src: url('/fonts/figtree.ttf') format('truetype');
+  font-style: normal;
+}
+
+* {
+  font-family: 'figtree', sans-serif;
+}

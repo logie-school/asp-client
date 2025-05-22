@@ -65,7 +65,7 @@ ipcMain.on('minimizeApp', () => {
 // get yt video info with url arg and requestId
 ipcMain.on('videoInfo', async (event, url, requestId) => {
   console.log('Received URL:', url, 'RequestId:', requestId);
-  const YoutubeVideoDetails = require('./helpers/ytdl.js');
+  const YoutubeVideoDetails = require('./helpers/dl.js');
   const youtube = new YoutubeVideoDetails();
 
   try {
@@ -75,6 +75,20 @@ ipcMain.on('videoInfo', async (event, url, requestId) => {
   } catch (error) {
     console.error('Error:', error);
     event.reply('videoInfoError', error.message, requestId); // Pass requestId back
+  }
+});
+
+ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality) => {
+  console.log('Download request:', { url, outputPath, format, quality });
+  const YoutubeVideoDetails = require('./helpers/dl.js');
+  const youtube = new YoutubeVideoDetails();
+
+  try {
+    const result = await youtube.downloadVideo(url, outputPath, format, quality);
+    event.reply('downloadResponse', result);
+  } catch (error) {
+    console.error('Download error:', error);
+    event.reply('downloadError', error.message);
   }
 });
 
