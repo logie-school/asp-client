@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { SectionKey } from "../settings"; // adjust path if needed
 
 import { SearchForm } from "@/components/sections/settings/components/search-form"
 import {
@@ -20,48 +21,48 @@ const data = {
   navMain: [
     {
       title: "general",
-      url: "#",
       items: [
-        {
-          title: "execution",
-          url: "#",
-        },
-        {
-          title: "appearance",
-          url: "#",
-        },
-        {
-          title: "notifications",
-          url: "#",
-        },
-        {
-          title: "hotkeys",
-          url: "#",
-        },
-        {
-          title: "caching",
-          url: "#",
-        }
+        { label: "Appearance", section: "appearance" },
+        { label: "Downloads", section: "downloads" },
+      ],
+    },
+    {
+      title: "extra",
+      items: [
+        { label: "ASP", section: "asp" },
       ],
     },
     {
       title: "advanced",
-      url: "#",
       items: [
-        {
-          title: "debugging",
-          url: "#",
-        },
-        {
-          title: "build info",
-          url: "#",
-        },
+        { label: "Ports", section: "ports" },
+        { label: "Debugging", section: "debugging" },
+        { label: "Build Info", section: "buildInfo" },
       ],
     },
   ],
+};
+
+export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  activeSection: SectionKey;
+  setActiveSection: React.Dispatch<React.SetStateAction<SectionKey>>;
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+// Map sidebar labels to section keys
+const sectionKeyMap: Record<string, SectionKey> = {
+  appearance: "appearance",
+  downloads: "downloads",
+  ports: "ports",
+  debugging: "debugging",
+  "build info": "buildInfo",
+  asp: "asp",
+};
+
+export function AppSidebar({
+  activeSection,
+  setActiveSection,
+  ...props
+}: AppSidebarProps) {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [filteredData, setFilteredData] = React.useState(data.navMain)
 
@@ -71,11 +72,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .map((group) => ({
         ...group,
         items: group.items.filter((item) =>
-          item.title.toLowerCase().includes(lowercasedSearchTerm)
+          item.label.toLowerCase().includes(lowercasedSearchTerm)
         ),
       }))
       .filter((group) => group.items.length > 0)
-    setFilteredData(filtered)
+    setFilteredData(filtered as typeof data.navMain)
   }, [searchTerm])
 
   return (
@@ -90,9 +91,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {item.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <a className="!capitalize transition-all hover:!pl-4 whitespace-nowrap" href={item.url}>{item.title}</a>
+                  <SidebarMenuItem key={item.section}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={activeSection === item.section}
+                      onClick={() => setActiveSection(item.section as SectionKey)}
+                      className="data-[active=true]:bg-white data-[active=true]:text-black data-[active=true]:font-medium data-[active=true]:rounded-lg data-[active=true]:transition-all data-[active=true]:duration-200 data-[active=true]:ease-in-out data-[active=true]:pl-4 data-[active=true]:pr-4 data-[active=true]:py-2"
+                    >
+                      <a className="!capitalize transition-all whitespace-nowrap" href="#">{item.label}</a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
