@@ -10,7 +10,7 @@ import SettingsDownloads from "./components/settings-sections/downloads/download
 import SettingsPorts from "./components/settings-sections/ports/ports";
 import SettingsDebugging from "./components/settings-sections/debugging/debugging";
 import SettingsBuildInfo from "./components/settings-sections/build-info/build-info";
-import SettingsASP from "./components/settings-sections/asp-extension/asp-extension"; 
+import SoundpadExtension from "./components/settings-sections/soundpad-extension/soundpad-extension"; 
 import { AnimatePresence, motion } from "framer-motion";
 
 
@@ -24,7 +24,7 @@ const sectionComponents = {
   ports: SettingsPorts,
   debugging: SettingsDebugging,
   buildInfo: SettingsBuildInfo,
-  asp: SettingsASP,
+  soundpadExtension: SoundpadExtension,
 };
 
 export type SectionKey = keyof typeof sectionComponents;

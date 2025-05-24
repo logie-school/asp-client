@@ -29,7 +29,7 @@ const data = {
     {
       title: "extra",
       items: [
-        { label: "ASP", section: "asp" },
+        { label: "Soundpad Extension", section: "soundpadExtension" },
       ],
     },
     {
@@ -47,16 +47,6 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   activeSection: SectionKey;
   setActiveSection: React.Dispatch<React.SetStateAction<SectionKey>>;
 }
-
-// Map sidebar labels to section keys
-const sectionKeyMap: Record<string, SectionKey> = {
-  appearance: "appearance",
-  downloads: "downloads",
-  ports: "ports",
-  debugging: "debugging",
-  "build info": "buildInfo",
-  asp: "asp",
-};
 
 export function AppSidebar({
   activeSection,

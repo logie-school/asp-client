@@ -1,5 +1,8 @@
 "use client";
 
+import { SettingsProvider } from './contexts/settings-context';
+import SettingsLoader from "./helpers/settings-helper/settings-helper";
+
 import { useState } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toolbar } from "@/components/toolbar";
@@ -33,14 +36,15 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider attribute="class" defaultTheme='dark'>
-          <Toolbar />
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <SettingsProvider>
+          <SettingsLoader />
+          <ThemeProvider attribute="class" defaultTheme='dark'>
+            <Toolbar />
             {children}
-          <Toaster position="top-center" richColors />
-        </ThemeProvider>
+            <Toaster position="top-center" richColors />
+          </ThemeProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

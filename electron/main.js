@@ -3,13 +3,16 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('node:path');
+const { openFolderDialog } = require('./helpers/dialog.js');
+const { validatePath } = require('./helpers/validatePath.js');
+const { openFolder } = require('./helpers/openFolder.js');
 
 let mainWindow;
 
 const createWindow = () => {
   // Assign to the global mainWindow variable
   mainWindow = new BrowserWindow({
-    width: 800,
+    width: 1200,
     minWidth: 800,
     height: 600,
     minHeight: 400,
@@ -66,10 +69,9 @@ ipcMain.on('minimizeApp', () => {
 ipcMain.on('videoInfo', async (event, url, requestId) => {
   console.log('Received URL:', url, 'RequestId:', requestId);
   const YoutubeVideoDetails = require('./helpers/dl.js');
-  const youtube = new YoutubeVideoDetails();
 
   try {
-    const details = await youtube.getVideoDetails(url);
+    const details = await YoutubeVideoDetails.getVideoDetails(url);
     console.log('Video details:', details);
     event.reply('videoInfoResponse', details, requestId); // Pass requestId back
   } catch (error) {
@@ -80,16 +82,27 @@ ipcMain.on('videoInfo', async (event, url, requestId) => {
 
 ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality) => {
   console.log('Download request:', { url, outputPath, format, quality });
-  const YoutubeVideoDetails = require('./helpers/dl.js');
-  const youtube = new YoutubeVideoDetails();
+  const { downloadVideo } = require('./helpers/dl.js');
 
   try {
-    const result = await youtube.downloadVideo(url, outputPath, format, quality);
+    const result = await downloadVideo(url, outputPath, format, quality);
     event.reply('downloadResponse', result);
   } catch (error) {
     console.error('Download error:', error);
     event.reply('downloadError', error.message);
   }
+});
+
+ipcMain.handle('open-folder-dialog', async () => {
+  return await openFolderDialog();
+});
+
+ipcMain.handle('validate-path', async (event, folderPath) => {
+  return validatePath(folderPath);
+});
+
+ipcMain.handle('open-download-folder', async (event, folderPath) => {
+  return openFolder(folderPath);
 });
 
 // This method will be called when Electron has finished

@@ -7,9 +7,10 @@ contextBridge.exposeInMainWorld('api', {
       'maximizeApp', 
       'minimizeApp',
       'videoInfo',
+      'downloadVideo',
     ];
     if (validChannels.includes(channel)) {
-      ipcRenderer.send(channel, ...args); // Already passes all args, including requestId
+      ipcRenderer.send(channel, ...args);
     }
   },
   receive: (channel, func) => {
@@ -17,10 +18,12 @@ contextBridge.exposeInMainWorld('api', {
       'windowStateChange', 
       'videoInfoResponse',
       'videoInfoError',
+      'downloadResponse',
+      'downloadError',
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.removeAllListeners(channel);
-      ipcRenderer.on(channel, (event, ...args) => func(...args)); // Already passes all args, including requestId
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
     }
   },
   removeListener: (channel, func) => {
@@ -28,9 +31,21 @@ contextBridge.exposeInMainWorld('api', {
       'windowStateChange', 
       'videoInfoResponse',
       'videoInfoError',
+      'downloadResponse',
+      'downloadError',
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.removeListener(channel, func);
     }
-  }
+  },
+  invoke: (channel, ...args) => {
+    const validChannels = [
+      'open-folder-dialog',
+      'validate-path',
+      'open-download-folder'
+    ];
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, ...args);
+    }
+  },
 });

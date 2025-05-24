@@ -52,6 +52,7 @@ export function Download({ active }: DownloadProps) {
 
   const [videoUrl, setVideoUrl] = useState("");
   const [downloadButtonActive, setDownloadButtonActive] = useState(false);
+  const [downloadButtonLoading, setDownloadButtonLoading] = useState(false);
   const [infoButtonActive, setInfoButtonActive] = useState(false);
   const [videoTitle, setVideoTitle] = useState("Video Title");
   const [videoDescription, setVideoDescription] = useState("lorem ipsum dolor sit amet consectetur...");
@@ -103,26 +104,91 @@ export function Download({ active }: DownloadProps) {
     }
   }, [previewPreference]);
 
+  // Helper to check if a string is a valid YouTube video or playlist URL
+  function isValidYouTubeUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      if (
+        parsed.hostname === "www.youtube.com" ||
+        parsed.hostname === "youtube.com" ||
+        parsed.hostname === "m.youtube.com"
+      ) {
+        // Must have a video id
+        if (parsed.pathname === "/watch" && parsed.searchParams.has("v")) {
+          return true;
+        }
+        // Playlist only (optional: allow /playlist?list=...)
+        if (parsed.pathname === "/playlist" && parsed.searchParams.has("list")) {
+          return true;
+        }
+        // Video with playlist
+        if (parsed.pathname === "/watch" && parsed.searchParams.has("v") && parsed.searchParams.has("list")) {
+          return true;
+        }
+      }
+      // youtu.be short links
+      if (
+        parsed.hostname === "youtu.be" &&
+        parsed.pathname.length > 1
+      ) {
+        return true;
+      }
+    } catch {
+      // Not a valid URL
+      return false;
+    }
+    return false;
+  }
+
+  // Helper to clean a YouTube URL to only include the video id (?v=)
+  function cleanYouTubeUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      if (
+        (parsed.hostname === "www.youtube.com" ||
+          parsed.hostname === "youtube.com" ||
+          parsed.hostname === "m.youtube.com") &&
+        parsed.pathname === "/watch" &&
+        parsed.searchParams.has("v")
+      ) {
+        // Only keep the v param
+        const clean = new URL("https://www.youtube.com/watch");
+        clean.searchParams.set("v", parsed.searchParams.get("v")!);
+        return clean.toString();
+      }
+      // youtu.be short links: leave as is
+      if (parsed.hostname === "youtu.be" && parsed.pathname.length > 1) {
+        return url;
+      }
+      // Otherwise, return original
+      return url;
+    } catch {
+      return url;
+    }
+  }
+
   const handleURLChange = (url: string) => {
     setVideoUrl(url);
     setImageLoaded(false);
 
-    if (url) {
+    if (url && isValidYouTubeUrl(url)) {
+      // Clean the URL to remove playlist/list params
+      const cleanedUrl = cleanYouTubeUrl(url);
+
       setIsLoading(true);
+      setDownloadButtonLoading(true); // <--- Add this line
       setAvgColor(defaultBgColor);
       setDownloadButtonActive(false);
       setInfoButtonActive(false);
 
-      // Set loading state for title and description
       setVideoTitle("Loading...");
       setVideoDescription("Loading video details...");
 
-      // Increment requestId for each new request
       requestIdRef.current += 1;
       const thisRequestId = requestIdRef.current;
 
       if (typeof window !== 'undefined') {
-        window.api.send("videoInfo", url, thisRequestId);
+        window.api.send("videoInfo", cleanedUrl, thisRequestId);
       }
     } else {
       setDownloadButtonActive(false);
@@ -132,6 +198,7 @@ export function Download({ active }: DownloadProps) {
       setVideoDescription("");
       setAvgColor(defaultBgColor);
       setIsLoading(false);
+      setDownloadButtonLoading(false); // <--- Add this line
       setImageLoaded(false);
     }
   };
@@ -145,6 +212,7 @@ export function Download({ active }: DownloadProps) {
         setDownloadButtonActive(false);
         setInfoButtonActive(false);
         setIsLoading(false);
+        setDownloadButtonLoading(false); // <--- Add this line
         setImageLoaded(false);
         toast.error(error);
       };
@@ -157,6 +225,7 @@ export function Download({ active }: DownloadProps) {
           setDownloadButtonActive(false);
           setInfoButtonActive(false);
           setIsLoading(false);
+          setDownloadButtonLoading(false); // <--- Add this line
           setImageLoaded(false);
           return;
         }
@@ -165,6 +234,7 @@ export function Download({ active }: DownloadProps) {
           setVideoTitle(details.title || "Video Title");
           setVideoDescription(details.description || "No description available");
           setIsLoading(false);
+          setDownloadButtonLoading(false); // <--- Add this line
           setDownloadButtonActive(true);
           setInfoButtonActive(true);
         } else {
@@ -172,6 +242,7 @@ export function Download({ active }: DownloadProps) {
           setDownloadButtonActive(false);
           setInfoButtonActive(false);
           setIsLoading(false);
+          setDownloadButtonLoading(false); // <--- Add this line
           setImageLoaded(false);
           toast.error("Invalid video data received");
         }
@@ -374,10 +445,10 @@ export function Download({ active }: DownloadProps) {
                               transition={{ type: "spring", stiffness: 300, damping: 30 }}
                               className="bg-[#0a0a0a] rounded-2xl p-8 max-w-[600px] w-[90vw] max-h-[60vh] shadow-2xl overflow-auto project-modal project-modal-open"
                             >
-                              <div className="flex items-start gap-4 flex-col justify-between">
+                              <div className="w-full flex items-start gap-4 flex-col justify-between">
                                 {videoDetails && (
-                                  <motion.div className="flex items-start gap-4 flex-col justify-between relative">
-                                    <h2 className="text-2xl font-medium">{videoDetails.title}</h2>
+                                  <motion.div className="flex items-start gap-4 flex-col justify-between relative w-full wrap-break-word">
+                                    <h2 className="w-full text-2xl font-medium">{videoDetails.title}</h2>
                                     <span className="opacity-50 whitespace-pre-wrap">
                                       {videoDetails.description.split('\n').map((line, i) => (
                                         <React.Fragment key={i}>
@@ -605,11 +676,11 @@ export function Download({ active }: DownloadProps) {
               onChange={(e) => handleURLChange(e.target.value)}
             />
             <Button
-              disabled={!downloadButtonActive}
+              disabled={!downloadButtonActive || downloadButtonLoading || isLoading}
               className="h-full aspect-square relative"
             >
               <AnimatePresence mode="wait">
-                {isLoading ? (
+                {(downloadButtonLoading || isLoading) ? (
                   <motion.div
                     key="loader"
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -633,7 +704,75 @@ export function Download({ active }: DownloadProps) {
                     exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="absolute inset-0 flex items-center justify-center"
-                    onClick={() => {toast('test')}}
+                    onClick={async () => {
+                      if (videoDetails && videoUrl) {
+                        setDownloadButtonLoading(true);
+
+                        let outputPath = "";
+                        try {
+                          const settings = JSON.parse(localStorage.getItem("settings") || "{}");
+                          outputPath = settings.downloads?.downloadPath || "";
+                        } catch {
+                          outputPath = "";
+                        }
+                        if (!outputPath) {
+                          toast.error("No download path set in settings.");
+                          setDownloadButtonLoading(false);
+                          return;
+                        }
+
+                        let timeoutId: NodeJS.Timeout | null = null;
+
+                        // Listen for download result (success or error)
+                        const handleDownloadResponse = (result: boolean) => {
+                          if (timeoutId) clearTimeout(timeoutId);
+                          setDownloadButtonLoading(false);
+                          if (result) {
+                            toast.success("Download complete!");
+                          } else {
+                            toast.error("Download failed.");
+                          }
+                          if (window.api && window.api.removeListener) {
+                            window.api.removeListener("downloadResponse", handleDownloadResponse);
+                            window.api.removeListener("downloadError", handleDownloadError);
+                          }
+                        };
+                        const handleDownloadError = (error: string) => {
+                          if (timeoutId) clearTimeout(timeoutId);
+                          setDownloadButtonLoading(false);
+                          toast.error(error || "Download failed.");
+                          if (window.api && window.api.removeListener) {
+                            window.api.removeListener("downloadResponse", handleDownloadResponse);
+                            window.api.removeListener("downloadError", handleDownloadError);
+                          }
+                        };
+
+                        if (window.api && window.api.receive) {
+                          window.api.receive("downloadResponse", handleDownloadResponse);
+                          window.api.receive("downloadError", handleDownloadError);
+                        }
+
+                        // Set a 30 second timeout
+                        timeoutId = setTimeout(() => {
+                          setDownloadButtonLoading(false);
+                          toast.error("Download timed out after 2 minutes.");
+                          if (window.api && window.api.removeListener) {
+                            window.api.removeListener("downloadResponse", handleDownloadResponse);
+                            window.api.removeListener("downloadError", handleDownloadError);
+                          }
+                        }, 120_000); // 2 minutes
+
+                        window.api.send(
+                          "downloadVideo",
+                          videoUrl,
+                          outputPath,
+                          typePreference,
+                          downloadPreference
+                        );
+                      } else {
+                        toast.error("No valid video details available to download.");
+                      }
+                    }}
                   >
                     <DownloadIcon />
                   </motion.div>
