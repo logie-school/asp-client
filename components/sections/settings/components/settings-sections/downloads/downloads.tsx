@@ -117,7 +117,7 @@ export default function SettingsDownloads() {
             isPathValid === false ? (
               <div className="flex items-center gap-4">
                 <div className="text-amber-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-amber-500 rounded-md p-2 bg-amber-500/10">
-                  <TriangleAlertIcon size={20} />
+                  <TriangleAlertIcon size={20} className="flex shrink-0" />
                   Download path is invalid, a new path will be made when you use the download feature.
                 </div>
                 <Button
@@ -160,8 +160,15 @@ export default function SettingsDownloads() {
                   onClick={async () => {
                     if (window.api?.invoke) {
                       const folder = await window.api.invoke('open-folder-dialog');
-                      console.log('Selected folder:', folder);
-                      if (folder) setTempPath(folder);
+                      if (folder) {
+                        const valid = await window.api.invoke('validate-path', folder);
+                        setTempPath(folder);
+                        setIsPathValid(valid);
+                        updateSettings('downloads', {
+                          ...downloadsSettings,
+                          downloadPath: folder
+                        });
+                      }
                     }
                   }}  
                 >

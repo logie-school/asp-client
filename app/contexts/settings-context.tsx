@@ -13,6 +13,10 @@ interface Settings {
   downloads?: {
     downloadPath: string;
   };
+  soundpad?: {
+    enabled: boolean;
+    port: string;
+  };
 }
 
 interface SettingsContextType {

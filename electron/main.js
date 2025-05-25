@@ -17,6 +17,8 @@ const createWindow = () => {
     height: 600,
     minHeight: 400,
     titleBarStyle: 'hidden',
+    // get icoin which  is at the root then /app/favicon.ico
+    icon: path.join(__dirname, '../app', 'favicon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
