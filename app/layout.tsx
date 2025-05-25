@@ -2,14 +2,13 @@
 
 import { SettingsProvider } from './contexts/settings-context';
 import SettingsLoader from "./helpers/settings-helper/settings-helper";
+import LoaderTheme from "./helpers/settings-helper/loaders/appearance/theme";
 
 import { useState } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toolbar } from "@/components/toolbar";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
-import { Sidebar } from "@/components/sidebar";
-import { Settings } from "@/components/sections/settings/settings";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,10 +21,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// // read theme from local storage
-// const settings = typeof window !== "undefined" ? localStorage.getItem("settings") : null;
-// const theme = settings ? JSON.parse(settings).appearance.theme : "system";
-
+// Read theme from localStorage (SSR-safe default)
+function getInitialTheme() {
+  if (typeof window !== "undefined") {
+    try {
+      const settings = localStorage.getItem("settings");
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        return parsed?.appearance?.theme || "system";
+      }
+    } catch {}
+  }
+  return "system";
+}
 
 export default function RootLayout({
   children,
@@ -38,8 +46,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SettingsProvider>
-          <SettingsLoader />
-          <ThemeProvider attribute="class" defaultTheme='dark'>
+          <ThemeProvider attribute="class" defaultTheme={getInitialTheme()} enableSystem>
+            {/* LoaderTheme syncs context to next-themes */}
+            <SettingsLoader />
+            <LoaderTheme />
             <Toolbar />
             {children}
             <Toaster position="top-center" richColors />

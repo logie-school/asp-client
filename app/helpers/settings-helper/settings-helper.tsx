@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useSettings } from '@/app/contexts/settings-context'
 import LoaderBoundingBoxes from './loaders/debugging/bounding-boxes'
+import LoaderTheme from "./loaders/appearance/theme";
 
 export default function SettingsLoader() {
     const { settings } = useSettings();
@@ -13,5 +14,10 @@ export default function SettingsLoader() {
         }
     }, [settings]);
 
-    return <LoaderBoundingBoxes />
+    return (
+        <>
+            <LoaderBoundingBoxes />
+            <LoaderTheme />
+        </>
+    )
 }

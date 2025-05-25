@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 interface Settings {
   appearance?: {
     theme: string;
-    animations: boolean;
+    // animations: boolean;
   };
   debugging?: {
     // devTools: boolean;

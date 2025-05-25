@@ -48,10 +48,10 @@ export function Toolbar() {
                     )}
                 </div>
                 <div className="flex flex-row">
-                    <button className="toolbar-button" id="minimizeButton" onClick={handleMinimize}>
+                    <button className="toolbar-button hover:bg-foreground/10" id="minimizeButton" onClick={handleMinimize}>
                         <Minus size={16} />
                     </button>
-                    <button className="toolbar-button" id="maximizeButton" onClick={handleMaximize}>
+                    <button className="toolbar-button hover:bg-foreground/10" id="maximizeButton" onClick={handleMaximize}>
                         {isMaximized ? <Copy size={13} style={{ transform: "scaleX(-100%)" }} /> : <Square size={13} />}
                     </button>
                     <button className="toolbar-button" id="closeButton" onClick={handleClose}>

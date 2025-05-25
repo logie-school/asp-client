@@ -25,8 +25,8 @@ export function SidebarButton({ children, active, onClick, id }: SidebarButtonPr
             <div
               className={
                 active
-                  ? "indicator h-5 w-[3px] absolute bg-white left-0 rounded-full transition-all"
-                  : "indicator h-1 w-[3px] absolute bg-white/0 left-0 rounded-full group-hover:bg-white/50 transition-all group-hover:h-3"
+                  ? "indicator h-5 w-[3px] absolute bg-foreground left-0 rounded-full transition-all"
+                  : "indicator h-1 w-[3px] absolute bg-white/0 left-0 rounded-full group-hover:bg-foreground/50 transition-all group-hover:h-3"
               }
             ></div>
             <div className={active ? "opacity-100 transition-all" : "opacity-50 transition-all"}>

@@ -7,11 +7,6 @@
     transition: 0.2s;
 }
 
-.toolbar-button:hover {
-    background-color: #ffffff22;
-    transition: 0.2s;
-}
-
 .toolbar-button:active {
     opacity: 0.5;
     transition: 0s;
