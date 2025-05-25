@@ -6,6 +6,7 @@ import "./download.css";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,10 @@ interface VideoDetails {
 
 export function Download({ active }: DownloadProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const defaultBgColor = "#1f1f1f";
+  const { resolvedTheme } = useTheme(); // Add this line
+
+  // Set default background color based on theme
+  const defaultBgColor = resolvedTheme === "light" ? "#e2e2e2" : "#1f1f1f";
   const [avgColor, setAvgColor] = useState(defaultBgColor);
 
 
@@ -103,6 +107,14 @@ export function Download({ active }: DownloadProps) {
       localStorage.setItem("previewPreference", previewPreference);
     }
   }, [previewPreference]);
+
+  // Update avgColor when theme changes and no image is loaded
+  useEffect(() => {
+    if (!imageLoaded) {
+      setAvgColor(resolvedTheme === "light" ? "#e2e2e2" : "#1f1f1f");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedTheme]);
 
   // Helper to check if a string is a valid YouTube video or playlist URL
   function isValidYouTubeUrl(url: string): boolean {
@@ -420,7 +432,7 @@ export function Download({ active }: DownloadProps) {
                         onClick={() => setOpen(true)}
                         whileHover={{ backgroundColor: "#fff1" }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className={`${!infoButtonActive ? '!opacity-50 pointer-events-none' : ''} cursor-pointer rounded-xl p-2 shadow-md flex-shrink-0 project-modal`}
+                        className={`${!infoButtonActive ? '!opacity-50 pointer-events-none' : ''} cursor-pointer rounded-xl p-2 flex-shrink-0 project-modal`}
                       >
                         <div className="gap-2 flex flex-col">
                           <InfoIcon size={20} />
@@ -443,7 +455,7 @@ export function Download({ active }: DownloadProps) {
                               animate={{ scale: 1 }}
                               exit={{ scale: 0.95 }}
                               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                              className="bg-[#0a0a0a] rounded-2xl p-8 max-w-[600px] w-[90vw] max-h-[60vh] shadow-2xl overflow-auto project-modal project-modal-open"
+                              className="dark:bg-[#0a0a0a] bg-[#e2e2e2] rounded-2xl p-8 max-w-[600px] w-[90vw] max-h-[60vh] shadow-2xl overflow-auto project-modal project-modal-open"
                             >
                               <div className="w-full flex items-start gap-4 flex-col justify-between">
                                 {videoDetails && (
@@ -594,8 +606,8 @@ export function Download({ active }: DownloadProps) {
                 <div className="prefs-item">
                   <div className="prefs-item-content">
                     <div className="prefs-title-wrapper">
-                      <div className="prefs-item-title">Type</div>
-                      <div className="prefs-item-desc">Change the quality of the downloaded video.</div>
+                      <div className="prefs-item-title !text-foreground">Type</div>
+                      <div className="prefs-item-desc !text-foreground/50">Change the quality of the downloaded video.</div>
                     </div>
                     <div className="prefs-item-value">
                       <Select value={typePreference} onValueChange={(value) => setTypePreference(value)}>
@@ -617,8 +629,8 @@ export function Download({ active }: DownloadProps) {
                 <div className="prefs-item">
                   <div className="prefs-item-content">
                     <div className="prefs-title-wrapper">
-                      <div className="prefs-item-title">Quality</div>
-                      <div className="prefs-item-desc">Change the quality of the downloaded video.</div>
+                      <div className="prefs-item-title !text-foreground">Quality</div>
+                      <div className="prefs-item-desc !text-foreground/50">Change the quality of the downloaded video.</div>
                     </div>
                     <div className="prefs-item-value">
                       <Select value={downloadPreference} onValueChange={(value) => setDownloadPreference(value)}>

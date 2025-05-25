@@ -86,7 +86,7 @@ export function AppSidebar({
                       asChild
                       isActive={activeSection === item.section}
                       onClick={() => setActiveSection(item.section as SectionKey)}
-                      className="data-[active=true]:bg-white data-[active=true]:text-black data-[active=true]:font-medium data-[active=true]:rounded-lg data-[active=true]:transition-all data-[active=true]:duration-200 data-[active=true]:ease-in-out data-[active=true]:pl-4 data-[active=true]:pr-4 data-[active=true]:py-2"
+                      className="data-[active=true]:bg-foreground/10 data-[active=true]:text-forergound data-[active=true]:font-medium data-[active=true]:rounded-lg data-[active=true]:transition-all data-[active=true]:duration-200 data-[active=true]:ease-in-out data-[active=true]:pl-4 data-[active=true]:pr-4 data-[active=true]:py-2"
                     >
                       <a className="!capitalize transition-all whitespace-nowrap" href="#">{item.label}</a>
                     </SidebarMenuButton>
