@@ -3,7 +3,6 @@
 import { SettingsProvider } from './contexts/settings-context';
 import SettingsLoader from "./helpers/settings-helper/settings-helper";
 import LoaderTheme from "./helpers/settings-helper/loaders/appearance/theme";
-
 import { useState } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toolbar } from "@/components/toolbar";
@@ -21,33 +20,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Read theme from localStorage (SSR-safe default)
-function getInitialTheme() {
-  if (typeof window !== "undefined") {
-    try {
-      const settings = localStorage.getItem("settings");
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        return parsed?.appearance?.theme || "system";
-      }
-    } catch {}
-  }
-  return "system";
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [activeButton, setActiveButton] = useState<number | null>(0);
-
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/icon.ico" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SettingsProvider>
-          <ThemeProvider attribute="class" defaultTheme={getInitialTheme()} enableSystem>
-            {/* LoaderTheme syncs context to next-themes */}
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <SettingsLoader />
             <LoaderTheme />
             <Toolbar />
