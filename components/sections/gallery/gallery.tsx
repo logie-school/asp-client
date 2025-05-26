@@ -10,7 +10,7 @@ export function Gallery({ active }: GalleryProps) {
       <SectionWrapper active={active}>
 
         <div className="w-full h-full flex items-center justify-center">
-          <span className="opacity-50">no videos found</span>
+          <span className="opacity-50">work in progress</span>
         </div>
 
       </SectionWrapper>

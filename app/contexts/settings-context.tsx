@@ -1,12 +1,18 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { toast } from 'sonner';
 
 interface Settings {
   appearance: { theme: string };
   debugging: { boundingBoxes: boolean };
   downloads: { downloadPath: string };
   soundpad: { enabled: boolean; port: string };
+  main: {
+    quality: string;
+    type: string;
+    preview: string;
+  };
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -14,6 +20,11 @@ const DEFAULT_SETTINGS: Settings = {
   debugging: { boundingBoxes: false },
   downloads: { downloadPath: '~/Downloads/asp-downloads' },
   soundpad: { enabled: false, port: '8844' },
+  main: {
+    quality: 'high',
+    type: 'mp3',
+    preview: 'image'
+  }
 };
 
 const SettingsContext = createContext<{
@@ -36,7 +47,8 @@ function initializeSettings(): Settings {
       appearance: { ...DEFAULT_SETTINGS.appearance, ...parsed.appearance },
       debugging: { ...DEFAULT_SETTINGS.debugging, ...parsed.debugging },
       downloads: { ...DEFAULT_SETTINGS.downloads, ...parsed.downloads },
-      soundpad: { ...DEFAULT_SETTINGS.soundpad, ...parsed.soundpad }
+      soundpad: { ...DEFAULT_SETTINGS.soundpad, ...parsed.soundpad },
+      main: { ...DEFAULT_SETTINGS.main, ...parsed.main }
     };
 
     // Always write back the merged settings to ensure completeness
@@ -51,6 +63,14 @@ function initializeSettings(): Settings {
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(initializeSettings);
+
+  // Check for settings reset on mount
+  useEffect(() => {
+    if (sessionStorage.getItem('settingsResetFlag')) {
+      toast.info("Settings have been reset to default values.");
+      sessionStorage.removeItem('settingsResetFlag');
+    }
+  }, []);
 
   // Sync settings to localStorage on every change
   useEffect(() => {

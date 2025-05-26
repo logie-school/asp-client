@@ -204,3 +204,15 @@ body {
 * {
   font-family: 'figtree', sans-serif;
 }
+
+
+/* prevent wrong theme flash */
+.prevent-foit {
+  visibility: hidden;
+}
+
+html.theme-ready {
+  .prevent-foit {
+    visibility: visible;
+  }
+}

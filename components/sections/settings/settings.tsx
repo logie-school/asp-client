@@ -11,6 +11,7 @@ import SettingsPorts from "./components/settings-sections/ports/ports";
 import SettingsDebugging from "./components/settings-sections/debugging/debugging";
 import SettingsBuildInfo from "./components/settings-sections/build-info/build-info";
 import SoundpadExtension from "./components/settings-sections/soundpad-extension/soundpad-extension"; 
+import SettingsReset from "./components/settings-sections/reset-settings/reset-settings";
 import { AnimatePresence, motion } from "framer-motion";
 
 
@@ -25,6 +26,7 @@ const sectionComponents = {
   debugging: SettingsDebugging,
   buildInfo: SettingsBuildInfo,
   soundpadExtension: SoundpadExtension,
+  resetSettings: SettingsReset,
 };
 
 export type SectionKey = keyof typeof sectionComponents;

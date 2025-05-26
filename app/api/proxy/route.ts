@@ -1,7 +1,5 @@
 import fetch from 'node-fetch';
 
-export const dynamic = "force-static"; // Add this line
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,13 +14,14 @@ export async function GET(request: Request) {
       return new Response('Failed to fetch the image', { status: response.status });
     }
 
-    const blob = await response.blob();
+    const buffer = await response.arrayBuffer();
 
     const headers = new Headers();
     headers.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
     headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Cache-Control', 'public, max-age=31536000');
 
-    return new Response(blob, { headers });
+    return new Response(buffer, { headers });
   } catch (error) {
     console.error('Error in /api/proxy:', error);
     return new Response('Internal Server Error', { status: 500 });

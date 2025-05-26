@@ -17,8 +17,8 @@ export function SidebarButton({ children, active, onClick, id }: SidebarButtonPr
   return (
     <TooltipProvider>
       <Tooltip disableHoverableContent>
-        <TooltipTrigger>
-          <div
+        <TooltipTrigger className="w-[56px] h-[56px] flex items-center justify-center relative" asChild>
+          <button
             className="w-[56px] h-[56px] flex items-center justify-center relative hover group"
             onClick={onClick}
           >
@@ -32,7 +32,7 @@ export function SidebarButton({ children, active, onClick, id }: SidebarButtonPr
             <div className={active ? "opacity-100 transition-all" : "opacity-50 transition-all"}>
               {children}
             </div>
-          </div>
+          </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={-10} className="select-none pointer-events-none">
           <p>{id}</p>

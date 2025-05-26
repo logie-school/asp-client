@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
+import { useSettings } from '@/app/contexts/settings-context';
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ interface VideoDetails {
 }
 
 export function Download({ active }: DownloadProps) {
+  const { settings, updateSettings } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
   const { resolvedTheme } = useTheme(); // Add this line
 
@@ -62,51 +64,31 @@ export function Download({ active }: DownloadProps) {
   const [videoDescription, setVideoDescription] = useState("lorem ipsum dolor sit amet consectetur...");
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
 
-  const [previewPreference, setPreviewPreference] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("previewPreference") || "image";
-    }
-    return "image";
-  });
+  // Get preferences from settings
+  const downloadPreference = settings.main?.quality || 'medium';
+  const typePreference = settings.main?.type || 'mp3';
+  const previewPreference = settings.main?.preview || 'image';
 
-  // Load from localStorage or use default values
-  const [downloadPreference, setDownloadPreference] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("downloadPreference") || "medium";
-    }
-    return "medium";
-  });
-  const [typePreference, setTypePreference] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("typePreference") || "mp3";
-    }
-    return "mp3";
-  });
+  // Update handlers
+  const handleQualityChange = (value: string) => {
+    updateSettings('main', {
+      ...settings.main,
+      quality: value
+    });
+  };
+
+  const handleTypeChange = (value: string) => {
+    updateSettings('main', {
+      ...settings.main,
+      type: value
+    });
+  };
 
   const [open, setOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Track the latest request
   const requestIdRef = useRef(0);
-
-  // Save preferences to localStorage when they change
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("downloadPreference", downloadPreference);
-    }
-  }, [downloadPreference]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("typePreference", typePreference);
-    }
-  }, [typePreference]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("previewPreference", previewPreference);
-    }
-  }, [previewPreference]);
 
   // Update avgColor when theme changes and no image is loaded
   useEffect(() => {
@@ -610,7 +592,7 @@ export function Download({ active }: DownloadProps) {
                       <div className="prefs-item-desc !text-foreground/50">Change the quality of the downloaded video.</div>
                     </div>
                     <div className="prefs-item-value">
-                      <Select value={typePreference} onValueChange={(value) => setTypePreference(value)}>
+                      <Select value={typePreference} onValueChange={handleTypeChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="select" />
                         </SelectTrigger>
@@ -633,7 +615,7 @@ export function Download({ active }: DownloadProps) {
                       <div className="prefs-item-desc !text-foreground/50">Change the quality of the downloaded video.</div>
                     </div>
                     <div className="prefs-item-value">
-                      <Select value={downloadPreference} onValueChange={(value) => setDownloadPreference(value)}>
+                      <Select value={downloadPreference} onValueChange={handleQualityChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="select" />
                         </SelectTrigger>
@@ -778,8 +760,8 @@ export function Download({ active }: DownloadProps) {
                           "downloadVideo",
                           videoUrl,
                           outputPath,
-                          typePreference,
-                          downloadPreference
+                          settings.main?.type || 'mp3',
+                          settings.main?.quality || 'medium'
                         );
                       } else {
                         toast.error("No valid video details available to download.");
