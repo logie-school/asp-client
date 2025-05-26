@@ -24,6 +24,7 @@ const data = {
       items: [
         { label: "Appearance", section: "appearance" },
         { label: "Downloads", section: "downloads" },
+        { label: "Reset Settings", section: "resetSettings" },
       ],
     },
     {

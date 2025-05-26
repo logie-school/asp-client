@@ -15,7 +15,7 @@ export default function SettingsPrefWrapper({children, className, title, descrip
                 <div className="w-full flex flex-row gap-4 items-center justify-between">
                     <div className="prefs-title-wrapper">
                         <div className="prefs-item-title !font-medium !text-foreground">{title}</div>
-                        <div className="prefs-item-desc !w-full !max-w-[300px] !text-foreground">{description}</div>
+                        <div className="prefs-item-desc !w-full !max-w-[300px] !text-foreground/50">{description}</div>
                     </div>
                     {children}
                 </div>

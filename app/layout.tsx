@@ -3,7 +3,8 @@
 import { SettingsProvider } from './contexts/settings-context';
 import SettingsLoader from "./helpers/settings-helper/settings-helper";
 import LoaderTheme from "./helpers/settings-helper/loaders/appearance/theme";
-import { useState } from "react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toolbar } from "@/components/toolbar";
 import { ThemeProvider } from "next-themes";
@@ -20,6 +21,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+function ThemeReadyProvider({ children }: { children: React.ReactNode }) {
+  const { theme, resolvedTheme } = useTheme();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (theme && resolvedTheme) {
+      document.documentElement.classList.add('theme-ready');
+      setIsReady(true);
+    }
+  }, [theme, resolvedTheme]);
+
+  return <div className={`prevent-foit ${isReady ? 'ready' : ''}`}>{children}</div>;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,12 +47,19 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SettingsProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeProvider 
+            attribute="class" 
+            defaultTheme="system"
+            enableSystem
+            storageKey="settings"
+          >
             <SettingsLoader />
             <LoaderTheme />
-            <Toolbar />
-            {children}
-            <Toaster position="top-center" richColors />
+            <ThemeReadyProvider>
+              <Toolbar />
+              {children}
+              <Toaster position="top-center" richColors />
+            </ThemeReadyProvider>
           </ThemeProvider>
         </SettingsProvider>
       </body>

@@ -151,6 +151,7 @@ export default function SettingsDownloads() {
             value={tempPath}
             onChange={handlePathChange}
             onBlur={handleDownloadPathBlur}
+            spellCheck={false}
           />
           <TooltipProvider>
             <Tooltip>
