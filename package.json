@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=development concurrently \"next dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "build": "next build && next export",
+    "build": "rimraf out && cross-env NODE_ENV=production next build",
     "electron": "cross-env NODE_ENV=production electron .",
     "start": "next start",
     "lint": "next lint"
@@ -74,6 +74,7 @@
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.3",
     "monaco-editor-webpack-plugin": "^7.1.0",
+    "rimraf": "^6.0.1",
     "style-loader": "^4.0.0",
     "tailwindcss": "^4",
     "ts-loader": "^9.5.2",

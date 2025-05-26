@@ -1,24 +1,30 @@
-// DEV
-import type { NextConfig } from "next";
+// // DEV
+// import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  devIndicators: false
-};
+// const nextConfig: NextConfig = {
+//   devIndicators: false,
+// };
 
-export default nextConfig;
+// export default nextConfig;
 
 
 
 // PROD
-// import type { NextConfig } from "next";
+import type { NextConfig } from "next";
 
-// const nextConfig: NextConfig = {
-//   output: "export",
-//   distDir: "out",
-//   images: {
-//     unoptimized: true,
-//   },
-//   assetPrefix: process.env.NODE_ENV === "production" ? "./" : "/", // Use relative paths for production
-// };
+const isDev = process.env.NODE_ENV === 'development';
 
-// export default nextConfig;
+const nextConfig: NextConfig = {
+  devIndicators: false,
+  output: "export",
+  distDir: "out",
+  images: {
+    unoptimized: true,
+  },
+  assetPrefix: isDev ? undefined : '/', // Changed this line
+  trailingSlash: true,
+  // Add basePath configuration
+  basePath: '',
+};
+
+export default nextConfig;

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useSettings } from '@/app/contexts/settings-context';
+import { getProxiedImageUrl } from '@/lib/proxy';
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -280,9 +281,53 @@ export function Download({ active }: DownloadProps) {
     return `rgb(${r}, ${g}, ${b})`;
   };
 
-  const getProxiedImageUrl = (url: string) => {
-    return `/api/proxy?url=${encodeURIComponent(url)}`;
+  // Replace the existing getProxiedImageUrl function with our imported one
+  const handleImageLoad = async (url: string) => {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = getProxiedImageUrl(url);
+      
+      img.onload = () => {
+        const avgColor = getAverageColor(img);
+        setAvgColor(avgColor);
+        setImageLoaded(true);
+      };
+    } catch (error) {
+      console.error('Error loading image:', error);
+      setImageLoaded(false);
+    }
   };
+
+  // Update the response handler to use the proxy
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const responseHandler = (details: VideoDetails, responseRequestId?: number) => {
+        if (responseRequestId === requestIdRef.current) {
+          setVideoDetails(details);
+          setVideoTitle(details.title);
+          setVideoDescription(details.description);
+          setDownloadButtonActive(true);
+          setInfoButtonActive(true);
+          setIsLoading(false);
+          setDownloadButtonLoading(false);
+          
+          // Use the proxied image URL
+          if (details.thumbnail) {
+            handleImageLoad(details.thumbnail);
+          }
+        }
+      };
+
+      window.api.receive("videoInfoResponse", responseHandler);
+
+      return () => {
+        if (window.api.removeListener) {
+          window.api.removeListener("videoInfoResponse", responseHandler);
+        }
+      };
+    }
+  }, [videoUrl]);
 
   function roundNumber(num: number): string {
     if (num >= 1_000_000_000) {
@@ -746,15 +791,15 @@ export function Download({ active }: DownloadProps) {
                           window.api.receive("downloadError", handleDownloadError);
                         }
 
-                        // Set a 30 second timeout
+                        // Set an hour timeout
                         timeoutId = setTimeout(() => {
                           setDownloadButtonLoading(false);
-                          toast.error("Download timed out after 2 minutes.");
+                          toast.error("Download timed out after an hour.");
                           if (window.api && window.api.removeListener) {
                             window.api.removeListener("downloadResponse", handleDownloadResponse);
                             window.api.removeListener("downloadError", handleDownloadError);
                           }
-                        }, 120_000); // 2 minutes
+                        }, 60 * 60 * 1000);
 
                         window.api.send(
                           "downloadVideo",
