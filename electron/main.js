@@ -6,18 +6,20 @@ const path = require('node:path');
 const http = require('http');
 const fetch = require('node-fetch').default;
 const { Readable } = require('stream');
-
-const { openFolderDialog } = require('./helpers/dialog.js');
-const { validatePath } = require('./helpers/validatePath.js');
-const { openFolder } = require('./helpers/openFolder.js');
+const handler = require('serve-handler');
+const { validatePath } = require('./helpers/validatePath');
+const { openFolderDialog } = require('./helpers/dialog');
+const { openFolder } = require('./helpers/openFolder');
 
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development';
 const PROXY_PORT = 8855;
+const STATIC_PORT = 8844; // Port for static files in production
 
-// Proxy server setup
-const setupProxyServer = () => {
-  const server = http.createServer(async (req, res) => {
+// Create both proxy and static file servers for production
+const setupServers = () => {
+  // Proxy server setup
+  const proxyServer = http.createServer(async (req, res) => {
     if (req.url.startsWith('/api/proxy')) {
       const urlObj = new URL(req.url, `http://localhost:${PROXY_PORT}`);
       const imageUrl = urlObj.searchParams.get('url');
@@ -48,15 +50,31 @@ const setupProxyServer = () => {
     }
   });
 
-  server.listen(PROXY_PORT, () => {
+  // Static file server for production only
+  const staticServer = isDev ? null : http.createServer((req, res) => {
+    return handler(req, res, {
+      public: path.join(__dirname, '../out'),
+      rewrites: [{ source: '**', destination: '/index.html' }]
+    });
+  });
+
+  // Start proxy server
+  proxyServer.listen(PROXY_PORT, () => {
     console.log(`Proxy server running at http://localhost:${PROXY_PORT}`);
   });
 
-  return server;
+  // Start static server only in production
+  if (!isDev) {
+    staticServer.listen(STATIC_PORT, () => {
+      console.log(`Static file server running at http://localhost:${STATIC_PORT}`);
+    });
+  }
+
+  return { proxyServer, staticServer };
 };
 
-// Create proxy server in both dev and prod
-let proxyServer = setupProxyServer();
+// Create servers
+const servers = setupServers();
 
 const createWindow = () => {
   // Create the browser window.
@@ -76,12 +94,11 @@ const createWindow = () => {
 
   // Load the app
   if (isDev) {
-    // In development, load from Next.js dev server
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, load the built HTML file
-    mainWindow.loadFile(path.join(__dirname, '../out/index.html'));
+    // In production, load from static server
+    mainWindow.loadURL(`http://localhost:${STATIC_PORT}`);
   }
 
   // Open external links in the default browser.
@@ -105,8 +122,17 @@ const createWindow = () => {
         ...details.responseHeaders,
         "Content-Security-Policy": [
           isDev 
-            ? `default-src 'self' localhost:3000; script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:3000; style-src 'self' 'unsafe-inline' localhost:3000; img-src 'self' data: localhost:3000 localhost:${PROXY_PORT}; connect-src 'self' localhost:3000 localhost:${PROXY_PORT} ws://localhost:3000;`
-            : `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: localhost:${PROXY_PORT}; connect-src 'self' localhost:${PROXY_PORT};`,
+            ? `default-src 'self' localhost:3000; 
+               script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:3000; 
+               style-src 'self' 'unsafe-inline' localhost:3000; 
+               img-src 'self' data: localhost:3000 localhost:${PROXY_PORT}; 
+               connect-src 'self' localhost:3000 localhost:${PROXY_PORT} ws://localhost:3000;`
+            : `default-src 'self' localhost:${STATIC_PORT}; 
+               script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:${STATIC_PORT}; 
+               style-src 'self' 'unsafe-inline' localhost:${STATIC_PORT}; 
+               img-src 'self' data: localhost:${STATIC_PORT} localhost:${PROXY_PORT}; 
+               connect-src 'self' localhost:${STATIC_PORT} localhost:${PROXY_PORT};
+               font-src 'self' data:;`,
         ],
       },
     });
@@ -149,6 +175,7 @@ ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality) => {
   }
 });
 
+// Add these handlers before app.whenReady()
 ipcMain.handle('open-folder-dialog', async () => await openFolderDialog());
 ipcMain.handle('validate-path', async (event, folderPath) => validatePath(folderPath));
 ipcMain.handle('open-download-folder', async (event, folderPath) => openFolder(folderPath));
@@ -160,10 +187,13 @@ app.whenReady().then(() => {
   });
 });
 
-// Clean up proxy server on app quit
+// Clean up servers on app quit
 app.on('window-all-closed', () => {
-  if (proxyServer) {
-    proxyServer.close();
+  if (servers.proxyServer) {
+    servers.proxyServer.close();
+  }
+  if (servers.staticServer) {
+    servers.staticServer.close();
   }
   if (process.platform !== 'darwin') {
     app.quit();
