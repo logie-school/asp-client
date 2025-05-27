@@ -7,7 +7,11 @@ module.exports = {
     "./node_modules/@heroui/theme/dist/components/scroll-shadow.js",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'sans': ['Figtree', 'sans-serif'],
+      }
+    }
   },
   darkMode: "class",
   plugins: [heroui()],

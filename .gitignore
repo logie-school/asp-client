@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# build artifacts
+/app-dist
+
 # production
 /build
 

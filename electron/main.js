@@ -95,7 +95,7 @@ const createWindow = () => {
   // Load the app
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
   } else {
     // In production, load from static server
     mainWindow.loadURL(`http://localhost:${STATIC_PORT}`);
