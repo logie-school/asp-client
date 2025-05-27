@@ -6,18 +6,16 @@ const path = require('node:path');
 const http = require('http');
 const fetch = require('node-fetch').default;
 const { Readable } = require('stream');
-
-const { openFolderDialog } = require('./helpers/dialog.js');
-const { validatePath } = require('./helpers/validatePath.js');
-const { openFolder } = require('./helpers/openFolder.js');
+const handler = require('serve-handler');
 
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development';
 const PROXY_PORT = 8855;
 
-// Proxy server setup
-const setupProxyServer = () => {
-  const server = http.createServer(async (req, res) => {
+// Create both proxy and static file servers for production
+const setupServers = () => {
+  // Proxy server setup
+  const proxyServer = http.createServer(async (req, res) => {
     if (req.url.startsWith('/api/proxy')) {
       const urlObj = new URL(req.url, `http://localhost:${PROXY_PORT}`);
       const imageUrl = urlObj.searchParams.get('url');
@@ -48,15 +46,16 @@ const setupProxyServer = () => {
     }
   });
 
-  server.listen(PROXY_PORT, () => {
+  // Only proxy server is needed now
+  proxyServer.listen(PROXY_PORT, 'localhost', () => {
     console.log(`Proxy server running at http://localhost:${PROXY_PORT}`);
   });
 
-  return server;
+  return { proxyServer };
 };
 
-// Create proxy server in both dev and prod
-let proxyServer = setupProxyServer();
+// Create servers
+const servers = setupServers();
 
 const createWindow = () => {
   // Create the browser window.
@@ -66,7 +65,7 @@ const createWindow = () => {
     height: 600,
     minHeight: 400,
     titleBarStyle: 'hidden',
-    icon: path.join(__dirname, '../app', 'icon.ico'),
+    icon: path.join(__dirname, '../', 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -74,15 +73,24 @@ const createWindow = () => {
     },
   });
 
-  // Load the app
-  if (isDev) {
-    // In development, load from Next.js dev server
-    mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
-  } else {
-    // In production, load the built HTML file
-    mainWindow.loadFile(path.join(__dirname, '../out/index.html'));
-  }
+  // Load the app with retry mechanism
+  const loadApp = async () => {
+    if (isDev) {
+      await mainWindow.loadURL('http://localhost:3000');
+    } else {
+      try {
+        // Directly load the local index.html file in production
+        const indexPath = path.join(__dirname, '../out/index.html');
+        await mainWindow.loadFile(indexPath);
+      } catch (error) {
+        console.error('Failed to load app:', error);
+        // Retry after 1 second
+        setTimeout(loadApp, 1000);
+      }
+    }
+  };
+
+  loadApp();
 
   // Open external links in the default browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -100,15 +108,31 @@ const createWindow = () => {
 
   // Update CSP to allow connecting to proxy server in both dev and prod
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    // Default CSP for production
+    let csp =
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline'; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "img-src 'self' data: http://localhost:8855 localhost:8855; " +
+      "connect-src 'self' localhost:8855;";
+
+    // In development, allow 'unsafe-eval' for Next.js Fast Refresh
+    if (isDev) {
+      csp =
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
+        "img-src 'self' data: http://localhost:8855 localhost:8855; " +
+        "connect-src 'self' localhost:8855 ws://localhost:3000 ws://127.0.0.1:3000;";
+    }
+
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        "Content-Security-Policy": [
-          isDev 
-            ? `default-src 'self' localhost:3000; script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:3000; style-src 'self' 'unsafe-inline' localhost:3000; img-src 'self' data: localhost:3000 localhost:${PROXY_PORT}; connect-src 'self' localhost:3000 localhost:${PROXY_PORT} ws://localhost:3000;`
-            : `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: localhost:${PROXY_PORT}; connect-src 'self' localhost:${PROXY_PORT};`,
-        ],
-      },
+        'Content-Security-Policy': [csp]
+      }
     });
   });
 };
@@ -149,9 +173,22 @@ ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality) => {
   }
 });
 
-ipcMain.handle('open-folder-dialog', async () => await openFolderDialog());
-ipcMain.handle('validate-path', async (event, folderPath) => validatePath(folderPath));
-ipcMain.handle('open-download-folder', async (event, folderPath) => openFolder(folderPath));
+const { validatePath } = require('./helpers/validatePath.js');
+ipcMain.handle('validate-path', async (event, folderPath) => {
+  return validatePath(folderPath);
+});
+
+// Add missing IPC handlers
+const { openFolderDialog } = require('./helpers/dialog.js');
+const { openFolder } = require('./helpers/openFolder.js');
+
+ipcMain.handle('open-folder-dialog', async () => {
+  return openFolderDialog();
+});
+
+ipcMain.handle('open-download-folder', async (event, folderPath) => {
+  return openFolder(folderPath);
+});
 
 app.whenReady().then(() => {
   createWindow();
@@ -160,12 +197,23 @@ app.whenReady().then(() => {
   });
 });
 
-// Clean up proxy server on app quit
+// Clean up servers on app quit
 app.on('window-all-closed', () => {
-  if (proxyServer) {
-    proxyServer.close();
+  if (servers.proxyServer) {
+    servers.proxyServer.close(() => {
+      console.log('Proxy server closed');
+    });
   }
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Add error handlers for the servers
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled rejection:', error);
 });

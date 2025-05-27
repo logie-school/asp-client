@@ -33,4 +33,4 @@ File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/i
 ---
 
 # TODO
-- fix seeding the default settings
+- fix built external stuff (ytdlp, etc)

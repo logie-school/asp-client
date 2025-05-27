@@ -1,0 +1,38 @@
+appId: com.asp.app
+productName: asp
+directories:
+  output: app-dist
+  buildResources: build
+files:
+  - out/**/*
+  - electron/**/*
+  - package.json
+extraResources:
+  - from: "ffmpeg"
+    to: "ffmpeg"
+  - from: "./node_modules/yt-dlp-exec/bin"
+    to: "yt-dlp-exec/bin"
+  - from: "./node_modules/ffmpeg-static"
+    to: "ffmpeg-static"
+asarUnpack:
+  - "resources/ffmpeg/**/*"
+  - "resources/yt-dlp-exec/**/*"
+  - "resources/ffmpeg-static/**/*"
+asar: true
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+nsis:
+  oneClick: true
+  perMachine: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "asp"
+  artifactName: "asp_setup-${version}.${ext}"
