@@ -7,10 +7,14 @@ const http = require('http');
 const fetch = require('node-fetch').default;
 const { Readable } = require('stream');
 const handler = require('serve-handler');
+const { validatePath } = require('./helpers/validatePath');
+const { openFolderDialog } = require('./helpers/dialog');
+const { openFolder } = require('./helpers/openFolder');
 
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development';
 const PROXY_PORT = 8855;
+const STATIC_PORT = 8844; // Port for static files in production
 
 // Create both proxy and static file servers for production
 const setupServers = () => {
@@ -46,12 +50,27 @@ const setupServers = () => {
     }
   });
 
-  // Only proxy server is needed now
-  proxyServer.listen(PROXY_PORT, 'localhost', () => {
+  // Static file server for production only
+  const staticServer = isDev ? null : http.createServer((req, res) => {
+    return handler(req, res, {
+      public: path.join(__dirname, '../out'),
+      rewrites: [{ source: '**', destination: '/index.html' }]
+    });
+  });
+
+  // Start proxy server
+  proxyServer.listen(PROXY_PORT, () => {
     console.log(`Proxy server running at http://localhost:${PROXY_PORT}`);
   });
 
-  return { proxyServer };
+  // Start static server only in production
+  if (!isDev) {
+    staticServer.listen(STATIC_PORT, () => {
+      console.log(`Static file server running at http://localhost:${STATIC_PORT}`);
+    });
+  }
+
+  return { proxyServer, staticServer };
 };
 
 // Create servers
@@ -73,24 +92,14 @@ const createWindow = () => {
     },
   });
 
-  // Load the app with retry mechanism
-  const loadApp = async () => {
-    if (isDev) {
-      await mainWindow.loadURL('http://localhost:3000');
-    } else {
-      try {
-        // Directly load the local index.html file in production
-        const indexPath = path.join(__dirname, '../out/index.html');
-        await mainWindow.loadFile(indexPath);
-      } catch (error) {
-        console.error('Failed to load app:', error);
-        // Retry after 1 second
-        setTimeout(loadApp, 1000);
-      }
-    }
-  };
-
-  loadApp();
+  // Load the app
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.webContents.openDevTools();
+  } else {
+    // In production, load from static server
+    mainWindow.loadURL(`http://localhost:${STATIC_PORT}`);
+  }
 
   // Open external links in the default browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -131,8 +140,21 @@ const createWindow = () => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [csp]
-      }
+        "Content-Security-Policy": [
+          isDev 
+            ? `default-src 'self' localhost:3000; 
+               script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:3000; 
+               style-src 'self' 'unsafe-inline' localhost:3000; 
+               img-src 'self' data: localhost:3000 localhost:${PROXY_PORT}; 
+               connect-src 'self' localhost:3000 localhost:${PROXY_PORT} ws://localhost:3000;`
+            : `default-src 'self' localhost:${STATIC_PORT}; 
+               script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:${STATIC_PORT}; 
+               style-src 'self' 'unsafe-inline' localhost:${STATIC_PORT}; 
+               img-src 'self' data: localhost:${STATIC_PORT} localhost:${PROXY_PORT}; 
+               connect-src 'self' localhost:${STATIC_PORT} localhost:${PROXY_PORT};
+               font-src 'self' data:;`,
+        ],
+      },
     });
   });
 };
@@ -173,22 +195,10 @@ ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality) => {
   }
 });
 
-const { validatePath } = require('./helpers/validatePath.js');
-ipcMain.handle('validate-path', async (event, folderPath) => {
-  return validatePath(folderPath);
-});
-
-// Add missing IPC handlers
-const { openFolderDialog } = require('./helpers/dialog.js');
-const { openFolder } = require('./helpers/openFolder.js');
-
-ipcMain.handle('open-folder-dialog', async () => {
-  return openFolderDialog();
-});
-
-ipcMain.handle('open-download-folder', async (event, folderPath) => {
-  return openFolder(folderPath);
-});
+// Add these handlers before app.whenReady()
+ipcMain.handle('open-folder-dialog', async () => await openFolderDialog());
+ipcMain.handle('validate-path', async (event, folderPath) => validatePath(folderPath));
+ipcMain.handle('open-download-folder', async (event, folderPath) => openFolder(folderPath));
 
 app.whenReady().then(() => {
   createWindow();
@@ -200,9 +210,10 @@ app.whenReady().then(() => {
 // Clean up servers on app quit
 app.on('window-all-closed', () => {
   if (servers.proxyServer) {
-    servers.proxyServer.close(() => {
-      console.log('Proxy server closed');
-    });
+    servers.proxyServer.close();
+  }
+  if (servers.staticServer) {
+    servers.staticServer.close();
   }
   if (process.platform !== 'darwin') {
     app.quit();
