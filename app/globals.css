@@ -222,6 +222,7 @@ body {
   font-family: 'figtree', sans-serif;
 } */
 
+
 * {
   font-family: "Figtree", sans-serif !important;
 }
@@ -235,8 +236,8 @@ body {
     @apply bg-background text-foreground;
     font-family: "Figtree", sans-serif !important;
   }
-}
 
+}
 
 /* prevent wrong theme flash */
 .prevent-foit {
