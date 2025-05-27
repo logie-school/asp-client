@@ -3,12 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "main": "electron/main.js",
+  "description": "A tool to make downloading YouTube videos easy",
+  "author": {
+    "name": "logie",
+    "email": "hello@logie.lol"
+  },
   "scripts": {
     "dev": "cross-env NODE_ENV=development concurrently \"next dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "build": "next build && next export",
+    "build": "rimraf out && cross-env NODE_ENV=production next build",
+    "build:fast": "cross-env NODE_ENV=production next build --no-lint",
+    "only-build": "next build",
     "electron": "cross-env NODE_ENV=production electron .",
-    "start": "next start",
-    "lint": "next lint"
+    "pack": "npm run build:fast && electron-builder --dir",
+    "pack:fast": "npm run build:fast && electron-builder --dir --publish=never",
+    "dist": "npm run build && electron-builder",
+    "dist:fast": "npm run build:fast && electron-builder --publish=never"
   },
   "dependencies": {
     "@codingame/monaco-jsonrpc": "^0.4.1",
@@ -69,11 +78,13 @@
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "electron": "^35.1.4",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.3",
     "monaco-editor-webpack-plugin": "^7.1.0",
+    "rimraf": "^6.0.1",
     "style-loader": "^4.0.0",
     "tailwindcss": "^4",
     "ts-loader": "^9.5.2",
@@ -84,11 +95,58 @@
     "webpack-dev-server": "^5.2.1"
   },
   "build": {
+    "appId": "com.asp.app",
+    "productName": "asp",
+    "directories": {
+      "output": "app-dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
     "extraResources": [
       {
-        "from": "node_modules/ffmpeg-static/ffmpeg",
+        "from": "ffmpeg",
         "to": "ffmpeg"
+      },
+      {
+        "from": "./node_modules/yt-dlp-exec/bin",
+        "to": "yt-dlp-exec/bin"
+      },
+      {
+        "from": "./node_modules/ffmpeg-static",
+        "to": "ffmpeg-static"
       }
-    ]
+    ],
+    "asarUnpack": [
+      "resources/ffmpeg/**/*",
+      "resources/yt-dlp-exec/**/*",
+      "resources/ffmpeg-static/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "asp"
+    }
   }
 }

@@ -11,15 +11,15 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
 
 function ThemeReadyProvider({ children }: { children: React.ReactNode }) {
   const { theme, resolvedTheme } = useTheme();
@@ -45,13 +45,12 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/icon.ico" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`antialiased`}>
         <SettingsProvider>
           <ThemeProvider 
             attribute="class" 
             defaultTheme="system"
             enableSystem
-            storageKey="settings"
           >
             <SettingsLoader />
             <LoaderTheme />

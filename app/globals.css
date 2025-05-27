@@ -195,14 +195,25 @@ body {
   overflow: hidden;
 }
 
-@font-face {
+/* @font-face {
   font-family: 'figtree';
   src: url('/fonts/figtree.ttf') format('truetype');
   font-style: normal;
-}
+} */
 
+/* @font-face {
+  font-family: 'figtree';
+  src: url('./fonts/figtree.ttf') format('truetype');
+  font-style: normal;
+} */
+/* 
 * {
   font-family: 'figtree', sans-serif;
+} */
+
+
+* {
+  font-family: 'Poppins', sans-serif;
 }
 
 
