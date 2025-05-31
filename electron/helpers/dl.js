@@ -415,7 +415,7 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
                             }
                         });
                         
-                        return true; // Success!
+                        return targetFile; // Return the path of the downloaded file
                     }
                     
                     console.warn(`No ${format} files found in temp directory`);
@@ -507,7 +507,7 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
                             }
                         });
                         
-                        return true;
+                        return targetFile;
                     }
                     
                     console.warn(`No ${format} files found in temp directory`);

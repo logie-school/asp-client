@@ -200,6 +200,12 @@ ipcMain.handle('open-folder-dialog', async () => await openFolderDialog());
 ipcMain.handle('validate-path', async (event, folderPath) => validatePath(folderPath));
 ipcMain.handle('open-download-folder', async (event, folderPath) => openFolder(folderPath));
 
+ipcMain.on('openFile', (event, filePath) => {
+  if (filePath) {
+    shell.showItemInFolder(filePath);
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
   app.on('activate', () => {

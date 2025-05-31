@@ -64,6 +64,8 @@ export function Download({ active }: DownloadProps) {
   const [videoTitle, setVideoTitle] = useState("Video Title");
   const [videoDescription, setVideoDescription] = useState("lorem ipsum dolor sit amet consectetur...");
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "ready" | "downloading" | "complete">("idle");
+  const [downloadedPath, setDownloadedPath] = useState<string | null>(null);
 
   // Get preferences from settings
   const downloadPreference = settings.main?.quality || 'medium';
@@ -165,6 +167,7 @@ export function Download({ active }: DownloadProps) {
   const handleURLChange = (url: string) => {
     setVideoUrl(url);
     setImageLoaded(false);
+    setDownloadStatus(url ? "loading" : "idle");
 
     if (url && isValidYouTubeUrl(url)) {
       // Clean the URL to remove playlist/list params
@@ -226,6 +229,7 @@ export function Download({ active }: DownloadProps) {
         }
         if (details && details.title) {
           setVideoDetails(details);
+          setDownloadStatus("ready");
           setVideoTitle(details.title || "Video Title");
           setVideoDescription(details.description || "No description available");
           setIsLoading(false);
@@ -233,6 +237,7 @@ export function Download({ active }: DownloadProps) {
           setDownloadButtonActive(true);
           setInfoButtonActive(true);
         } else {
+          setDownloadStatus("idle");
           setVideoDetails(null);
           setDownloadButtonActive(false);
           setInfoButtonActive(false);
@@ -555,7 +560,46 @@ export function Download({ active }: DownloadProps) {
                   style={{ backgroundColor: avgColor }}
                 >
                   <AnimatePresence mode="wait">
-                    {isLoading ? (
+                    {downloadStatus === "downloading" ? (
+                      <motion.div
+                        key="downloading"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="flex flex-col items-center justify-center h-full w-full"
+                      >
+                        <Loader className="animate-spin mb-4" />
+                        <div className="text-lg font-semibold mb-2">Downloading...</div>
+                        <div className="opacity-60">Please wait while your video is being downloaded.</div>
+                      </motion.div>
+                    ) : downloadStatus === "complete" ? (
+                      <motion.div
+                        key="complete"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="flex flex-col items-center justify-center h-full w-full"
+                      >
+                        <div className="text-3xl font-bold mb-2">Download Complete</div>
+                        <div className="opacity-60 m-4 mt-0 w-full text-center">
+                          Your video has been saved to {downloadedPath || "the selected path"}, put in a new link to download another.
+                        </div>
+                        <div className="flex flex-row gap-4">
+                          <Button
+                            onClick={() => {
+                              if (downloadedPath && window.api?.openFile) {
+                                window.api.openFile(downloadedPath);
+                              }
+                            }}
+                            disabled={!downloadedPath}
+                          >
+                            Open File Location
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ) : isLoading ? (
                       <motion.div 
                         key="loading"
                         initial={{ opacity: 0, y: 20 }}
@@ -782,6 +826,8 @@ export function Download({ active }: DownloadProps) {
                     onClick={async () => {
                       if (videoDetails && videoUrl) {
                         setDownloadButtonLoading(true);
+                        setDownloadStatus("downloading");
+                        setAvgColor(defaultBgColor); // <-- Reset background color here
 
                         // Get the active path from settings
                         const activePathObj = settings.downloads.paths.find(p => p.active);
@@ -796,12 +842,15 @@ export function Download({ active }: DownloadProps) {
                         let timeoutId: NodeJS.Timeout | null = null;
 
                         // Listen for download result (success or error)
-                        const handleDownloadResponse = (result: boolean) => {
+                        const handleDownloadResponse = (result: string | boolean) => {
                           if (timeoutId) clearTimeout(timeoutId);
                           setDownloadButtonLoading(false);
-                          if (result) {
-                            toast.success("Download complete!");
+                          if (typeof result === "string" && result) {
+                            setDownloadedPath(result); // Save the path
+                            setDownloadStatus("complete");
+                            toast.success("Download complete");
                           } else {
+                            setDownloadStatus("ready");
                             toast.error("Download failed.");
                           }
                           if (window.api && window.api.removeListener) {
@@ -812,6 +861,7 @@ export function Download({ active }: DownloadProps) {
                         const handleDownloadError = (error: string) => {
                           if (timeoutId) clearTimeout(timeoutId);
                           setDownloadButtonLoading(false);
+                          setDownloadStatus("ready");
                           toast.error(error || "Download failed.");
                           if (window.api && window.api.removeListener) {
                             window.api.removeListener("downloadResponse", handleDownloadResponse);

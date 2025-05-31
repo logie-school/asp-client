@@ -48,4 +48,5 @@ contextBridge.exposeInMainWorld('api', {
       return ipcRenderer.invoke(channel, ...args);
     }
   },
+  openFile: (filePath) => ipcRenderer.send('openFile', filePath),
 });
