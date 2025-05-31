@@ -33,5 +33,4 @@ File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/i
 ---
 
 # TODO
-- fix mp4 opus file type issue
-- add a download option where the user chooses where the file will go after its downloaded
+- fix the bug where the backgound for the thumbnail preview still gets updates if the user inputs then quickly deletes the link
