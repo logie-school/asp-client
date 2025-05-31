@@ -1,50 +1,43 @@
-import { CheckIcon, DownloadIcon, Folder, FolderOpenDotIcon, FolderOpenIcon, FolderSearchIcon, RotateCwIcon, TriangleAlertIcon } from "lucide-react";
-import { SettingsSectionHeader } from "../../settings-section-header";
-import SettingsPrefWrapper from "../../settings-pref-wrapper";
+import React, { useState, useEffect, useRef } from "react";
+import { useSettings } from "@/app/contexts/settings-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useSettings } from "@/app/contexts/settings-context";
-import { useState, useEffect } from "react";
+import { DownloadIcon, FolderSearchIcon, RotateCwIcon, TriangleAlertIcon, PlusIcon, CircleXIcon } from "lucide-react";
+import { PathList } from "./components/path-list";
+import { SettingsSectionHeader } from "../../settings-section-header";
+import SettingsPrefWrapper from "../../settings-pref-wrapper";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
-
-// Default settings
-const DEFAULT_SETTINGS = {
-  downloadPath: "~/Downloads/asp-downloads",
-  autoOpenFolder: false
-};
 
 export default function SettingsDownloads() {
   const { settings, updateSettings } = useSettings();
 
-  // Initialize tempPath with localStorage value or default if empty/undefined
-  const [tempPath, setTempPath] = useState<string>(() => {
-    const storedPath = settings.downloads?.downloadPath;
-    return (!storedPath || storedPath.trim() === '') ? DEFAULT_SETTINGS.downloadPath : storedPath;
-  });
+  // Always use the paths from settings, which are initialized from DEFAULT_SETTINGS in the context
+  const paths = settings.downloads?.paths ?? [];
 
-  // Path validity state for extra text
+  // Download path input is always the first path
+  const [tempPath, setTempPath] = useState<string>("");
   const [isPathValid, setIsPathValid] = useState<boolean | null>(null);
+  const prevPathRef = useRef(paths[0]?.path || "");
 
-  // Get downloads settings with defaults
-  const downloadsSettings = {
-    ...DEFAULT_SETTINGS,
-    ...settings.downloads,
-    // Ensure downloadPath uses default if empty/undefined in settings
-    downloadPath: (!settings.downloads?.downloadPath || settings.downloads.downloadPath.trim() === '') 
-      ? DEFAULT_SETTINGS.downloadPath 
-      : settings.downloads.downloadPath
-  };
+  // Keep track of the previous path for revert
+  useEffect(() => {
+    prevPathRef.current = paths[0]?.path || "";
+  }, [paths]);
 
-  // Validate path on mount and whenever tempPath changes
+  // Validate tempPath only if not empty
   useEffect(() => {
     let cancelled = false;
     const validate = async () => {
+      if (!tempPath) {
+        setIsPathValid(null);
+        return;
+      }
       if (window.api?.invoke) {
         const valid = await window.api.invoke('validate-path', tempPath);
         if (!cancelled) setIsPathValid(valid);
@@ -54,51 +47,159 @@ export default function SettingsDownloads() {
     return () => { cancelled = true; };
   }, [tempPath]);
 
-  // Update handler for non-path settings
-  const handleSettingChange = (key: string, value: any) => {
-    if (key !== 'downloadPath') {
-      updateSettings('downloads', {
-        ...downloadsSettings,
-        [key]: value
-      });
-    }
+  // On mount or when paths change, input is empty
+  useEffect(() => {
+    setTempPath("");
+  }, [paths]);
+
+  // Update the first path in the array
+  const updateFirstPath = (newPath: string) => {
+    const match = newPath.replace(/[/\\]+$/, "").match(/([^\\/]+)$/);
+    const folderName = match ? match[1] : newPath.trim();
+    const newPaths = [
+      { name: folderName, path: newPath },
+      ...paths.slice(1)
+    ];
+    updateSettings('downloads', { paths: newPaths });
   };
 
-  // Handle input change to update temporary value and validate
-  const handlePathChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTempPath(e.target.value);
-  };
-
-  // Handle open folder button click
-  const handleOpenFolder = async () => {
-    if (downloadsSettings.downloadPath && window.api?.invoke) {
-      const result = await window.api.invoke('open-download-folder', downloadsSettings.downloadPath);
-      if (!result) {
-        toast.error("Failed to open folder, it likely does not exist.");
+  // For the folder picker button
+  const handlePickFolder = async () => {
+    if (window.api?.invoke) {
+      const folder = await window.api.invoke('open-folder-dialog');
+      if (folder) {
+        setTempPath(folder);
+        let valid = false;
+        if (window.api?.invoke) {
+          valid = await window.api.invoke('validate-path', folder);
+          setIsPathValid(valid);
+        }
+        // Do NOT call updateFirstPath(folder) here!
       }
     }
   };
 
-  // Handle blur event for downloadPath input
-  const handleDownloadPathBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const value = e.target.value.trim();
-
-    // If empty, use default value
-    const finalValue = !value ? DEFAULT_SETTINGS.downloadPath : value;
-    setTempPath(finalValue);
-
-    // Validate path using Electron IPC
-    let isValid = false;
+  // For the refresh/validate button
+  const handleValidate = async () => {
+    if (!tempPath) return;
     if (window.api?.invoke) {
-      isValid = await window.api.invoke('validate-path', finalValue);
-      setIsPathValid(isValid);
+      const valid = await window.api.invoke('validate-path', tempPath);
+      setIsPathValid(valid);
+      updateFirstPath(tempPath);
+      if (valid) {
+        toast.success("Path is now valid!");
+      } else {
+        toast.error("Path is still invalid! (Saved anyway)");
+      }
     }
+  };
 
-    // Always update settings, even if path is invalid
-    updateSettings('downloads', {
-      ...downloadsSettings,
-      downloadPath: finalValue
-    });
+  // Remove path handler (don't allow removing the first path)
+  const handleRemovePath = (idx: number) => {
+    if (idx === 0) {
+      toast.error("You cannot remove the default download path.");
+      return;
+    }
+    const newPaths = paths.filter((_, i) => i !== idx);
+    updateSettings('downloads', { paths: newPaths });
+  };
+
+  // Add a new path to the list (not replacing the first path)
+  const handleAddPath = async () => {
+    const newPath = tempPath.trim();
+    if (!newPath) {
+      toast.error("Please enter a path.");
+      return;
+    }
+    if (!isWindowsAbsolutePath(newPath)) {
+      toast.error("Not a valid Windows path.");
+      return;
+    }
+    if (hasInvalidWindowsChars(newPath)) {
+      toast.error("Path contains invalid characters.");
+      return;
+    }
+    if (hasInvalidWindowsSymbols(newPath)) {
+      toast.error("Folder names can only contain letters, numbers, spaces, dashes, underscores, and periods.");
+      return;
+    }
+    // Check for duplicates
+    if (paths.some(p => p.path === newPath)) {
+      toast.error("This path is already in the list.");
+      return;
+    }
+    // Validate path if possible
+    let valid = true;
+    if (window.api?.invoke) {
+      valid = await window.api.invoke('validate-path', newPath);
+    }
+    const match = newPath.replace(/[/\\]+$/, "").match(/([^\\/]+)$/);
+    const folderName = match ? match[1] : newPath;
+    const newPaths = [...paths, { name: folderName, path: newPath, active: false }];
+    updateSettings('downloads', { paths: newPaths });
+    setTempPath("");
+    setIsPathValid(null);
+    if (valid) {
+      toast.success("Path added");
+    } else {
+      toast.warning("Path added, but it does not exist. It will be created when used.");
+    }
+  };
+
+  // Handler for renaming a path entry (only updates the name, not the path)
+  const handleRenamePath = (idx: number, newName: string) => {
+    if (!newName.trim()) return;
+    const newPaths = paths.map((entry, i) =>
+      i === idx ? { ...entry, name: newName } : entry
+    );
+    updateSettings('downloads', { paths: newPaths });
+    // Optionally show a toast
+    toast.success('Path name updated.');
+  };
+
+  // Add a function to check for invalid Windows path characters
+  const hasInvalidWindowsChars = (p: string) => {
+    // Forbidden chars: < > : " / \ | ? * (except for the drive colon and root slash)
+    // Allow colon only as the second char (drive letter)
+    // Allow ~ at the start
+    let pathWithoutDrive = p;
+    if (/^[a-zA-Z]:[\\/]/.test(p)) {
+      pathWithoutDrive = p.replace(/^[a-zA-Z]:[\\/]?/, "");
+    } else if (/^~[\\/]/.test(p)) {
+      pathWithoutDrive = p.replace(/^~[\\/]?/, "");
+    }
+    const forbidden = /[<>:"|?*\x00-\x1F]/g; // Don't forbid / or \ here, they're separators
+    return forbidden.test(pathWithoutDrive);
+  };
+
+  // Add a function to check for allowed folder/file name characters
+  const hasInvalidWindowsSymbols = (p: string) => {
+    // Remove drive letter or ~, split by \ or /
+    let parts = p;
+    if (/^[a-zA-Z]:[\\/]/.test(p)) {
+      parts = p.replace(/^[a-zA-Z]:[\\/]/, "");
+    } else if (/^~[\\/]/.test(p)) {
+      parts = p.replace(/^~[\\/]/, "");
+    }
+    // Split by slash or backslash
+    const segments = parts.split(/[\\/]/);
+    const allowed = /^[\w\s.-]+$/;
+    // Only check non-empty parts
+    return segments
+      .filter(part => part.length > 0)
+      .some(part => !allowed.test(part) || part.trim().length === 0);
+  };
+
+  // Update the absolute path checker to also check for invalid chars and symbols
+  const isWindowsAbsolutePath = (p: string) => {
+    const trimmed = p.trim();
+    // Must start with drive letter or ~, then slash or backslash
+    if (!/^(~|[a-zA-Z]:)[\\/]/.test(trimmed)) return false;
+    // Must not have forbidden chars
+    if (hasInvalidWindowsChars(trimmed)) return false;
+    // Must not have forbidden symbols
+    if (hasInvalidWindowsSymbols(trimmed)) return false;
+    return true;
   };
 
   return (
@@ -109,35 +210,27 @@ export default function SettingsDownloads() {
         icon={<DownloadIcon className="opacity-50" />}
       />
 
-      <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">        
+      <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
         <SettingsPrefWrapper
-          title="Download Path"
-          description="Set the default path for downloaded media."
+          title="Add Download Path"
+          description="Add a new download path. The first path is the default and cannot be removed."
           extra={
-            isPathValid === false ? (
+            tempPath && !isWindowsAbsolutePath(tempPath) ? (
+              <div className="flex items-center gap-4">
+                <div className="text-red-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-red-500 rounded-md p-2 bg-red-500/10">
+                  <CircleXIcon size={20} className="flex shrink-0" />
+                  Not a valid Windows path. Cannot use: <span className="font-mono">&lt; &gt; : " / \ | ? *</span>
+                </div>
+              </div>
+            ) : isPathValid === false && tempPath && isWindowsAbsolutePath(tempPath) ? (
               <div className="flex items-center gap-4">
                 <div className="text-amber-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-amber-500 rounded-md p-2 bg-amber-500/10">
                   <TriangleAlertIcon size={20} className="flex shrink-0" />
-                  Download path is invalid, a new path will be made when you use the download feature.
+                  Download path doesn't exist, a new path will be made when you use the download feature.
                 </div>
                 <Button
                   variant={'ghost'}
-                  onClick={async () => {
-                    if (window.api?.invoke) {
-                      const valid = await window.api.invoke('validate-path', tempPath);
-                      setIsPathValid(valid);
-                      // Always update settings, even if path is invalid
-                      updateSettings('downloads', {
-                        ...downloadsSettings,
-                        downloadPath: tempPath
-                      });
-                      if (valid) {
-                        toast.success("Path is now valid!");
-                      } else {
-                        toast.error("Path is still invalid! (Saved anyway)");
-                      }
-                    }
-                  }}
+                  onClick={handleValidate}
                 >
                   <RotateCwIcon />
                 </Button>
@@ -149,8 +242,7 @@ export default function SettingsDownloads() {
             className="w-full"
             placeholder="path"
             value={tempPath}
-            onChange={handlePathChange}
-            onBlur={handleDownloadPathBlur}
+            onChange={e => setTempPath(e.target.value)}
             spellCheck={false}
           />
           <TooltipProvider>
@@ -158,20 +250,7 @@ export default function SettingsDownloads() {
               <TooltipTrigger asChild>
                 <Button 
                   variant={'outline'}
-                  onClick={async () => {
-                    if (window.api?.invoke) {
-                      const folder = await window.api.invoke('open-folder-dialog');
-                      if (folder) {
-                        const valid = await window.api.invoke('validate-path', folder);
-                        setTempPath(folder);
-                        setIsPathValid(valid);
-                        updateSettings('downloads', {
-                          ...downloadsSettings,
-                          downloadPath: folder
-                        });
-                      }
-                    }
-                  }}  
+                  onClick={handlePickFolder}
                 >
                   <FolderSearchIcon />
                 </Button>
@@ -180,21 +259,35 @@ export default function SettingsDownloads() {
                 <p>Use explorer</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>        
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={handleAddPath}
+                  disabled={
+                    !tempPath.trim() ||
+                    !isWindowsAbsolutePath(tempPath) ||
+                    hasInvalidWindowsChars(tempPath) ||
+                    hasInvalidWindowsSymbols(tempPath)
+                  }
+                >
+                  <PlusIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Add path</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </SettingsPrefWrapper>
 
-        <SettingsPrefWrapper
-          title="Open Download Folder"
-          description="Open the folder where media is downloaded to."
-        >
-          <Button 
-            variant={'outline'}
-            onClick={handleOpenFolder}
-            disabled={!downloadsSettings.downloadPath}
-          >
-            <FolderOpenIcon />
-          </Button>
-        </SettingsPrefWrapper>
+        <PathList
+          paths={paths}
+          onRemove={handleRemovePath}
+          onRename={handleRenamePath}
+        />
       </div>
     </div>
   );

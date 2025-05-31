@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 interface Settings {
   appearance: { theme: string };
   debugging: { boundingBoxes: boolean };
-  downloads: { downloadPath: string };
+  downloads: { 
+    paths: { name: string; path: string; active: boolean }[];
+  };
   soundpad: { enabled: boolean; port: string };
   main: {
     quality: string;
@@ -18,7 +20,9 @@ interface Settings {
 const DEFAULT_SETTINGS: Settings = {
   appearance: { theme: 'system' },
   debugging: { boundingBoxes: false },
-  downloads: { downloadPath: '~/Downloads/asp-downloads' },
+  downloads: {
+    paths: [{ name: "asp-downloads", path: "~/Downloads/asp-downloads", active: true }]
+  },
   soundpad: { enabled: false, port: '8844' },
   main: {
     quality: 'high',

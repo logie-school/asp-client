@@ -34,7 +34,7 @@ export function SidebarButton({ children, active, onClick, id }: SidebarButtonPr
             </div>
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={-10} className="select-none pointer-events-none">
+        <TooltipContent side="right" sideOffset={-10} className="select-none pointer-events-none capitalize">
           <p>{id}</p>
         </TooltipContent>
       </Tooltip>

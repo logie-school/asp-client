@@ -622,7 +622,7 @@ export function Download({ active }: DownloadProps) {
             </div>
 
 
-            <div className="prefs-wrapper border border-input p-4 rounded-md shadow-sm bg h-full overflow-y-auto min-h-0 bg-input/30 max-w-[350px] flex flex-col">
+            <div className="prefs-wrapper border border-input p-4 rounded-md shadow-sm bg h-full overflow-y-auto min-h-0 bg-input/30 w-[550px] flex flex-col">
               <div className="section-title-wrapper flex flex-row items-center gap-2 border-b pb-2 mb-4">
                 <div className="section-title-icon">
                   <SlidersVertical size={18} />
@@ -670,6 +670,42 @@ export function Download({ active }: DownloadProps) {
                             <SelectItem value="high">High</SelectItem>
                             <SelectItem value="medium">Medium</SelectItem>
                             <SelectItem value="low">Low</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="prefs-item">
+                  <div className="prefs-item-content">
+                    <div className="prefs-title-wrapper">
+                      <div className="prefs-item-title !text-foreground">Download Path</div>
+                      <div className="prefs-item-desc !text-foreground/50">Change the default download path.</div>
+                    </div>
+                    <div className="prefs-item-value">
+                      <Select
+                        value={settings.downloads.paths.find(p => p.active)?.name || settings.downloads.paths[0]?.name}
+                        onValueChange={(selectedName) => {
+                          // Set only the selected path as active
+                          const newPaths = settings.downloads.paths.map(p => ({
+                            ...p,
+                            active: p.name === selectedName
+                          }));
+                          updateSettings('downloads', { paths: newPaths });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select path" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Download Path</SelectLabel>
+                            {settings.downloads.paths.map((p) => (
+                              <SelectItem key={p.name} value={p.name}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -747,13 +783,10 @@ export function Download({ active }: DownloadProps) {
                       if (videoDetails && videoUrl) {
                         setDownloadButtonLoading(true);
 
-                        let outputPath = "";
-                        try {
-                          const settings = JSON.parse(localStorage.getItem("settings") || "{}");
-                          outputPath = settings.downloads?.downloadPath || "";
-                        } catch {
-                          outputPath = "";
-                        }
+                        // Get the active path from settings
+                        const activePathObj = settings.downloads.paths.find(p => p.active);
+                        const outputPath = activePathObj?.path || settings.downloads.paths[0]?.path || "";
+
                         if (!outputPath) {
                           toast.error("No download path set in settings.");
                           setDownloadButtonLoading(false);
