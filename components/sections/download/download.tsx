@@ -350,6 +350,10 @@ export function Download({ active }: DownloadProps) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
   return (
     <div className="w-full h-full flex flex-row absolute" suppressHydrationWarning>
       <SectionWrapper active={active}>
@@ -580,11 +584,19 @@ export function Download({ active }: DownloadProps) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="flex flex-col items-center justify-center h-full w-full"
+                        className="flex flex-col items-center justify-center h-full w-full p-8"
                       >
-                        <div className="text-3xl font-bold mb-2">Download Complete</div>
-                        <div className="opacity-60 m-4 mt-0 w-full text-center">
-                          Your video has been saved to {downloadedPath || "the selected path"}, put in a new link to download another.
+                        <div className="text-3xl font-bold mb-2 text-center">Download Complete</div>
+                        <div className="opacity-60 w-full mb-4 text-center">
+                          {settings.downloads.useTempPath ? (
+                            <div className="opacity-60 w-full text-center">
+                              Your video has been saved, put in a new link to download another.
+                            </div>
+                          ) : (
+                            <div className="opacity-60 w-full text-center">
+                              Your video has been saved to {downloadedPath || "the selected path"}, put in a new link to download another.
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-row gap-4">
                           <Button
@@ -721,42 +733,43 @@ export function Download({ active }: DownloadProps) {
                   </div>
                 </div>
 
-                <div className="prefs-item">
-                  <div className="prefs-item-content">
-                    <div className="prefs-title-wrapper">
-                      <div className="prefs-item-title !text-foreground">Download Path</div>
-                      <div className="prefs-item-desc !text-foreground/50">Change the default download path.</div>
-                    </div>
-                    <div className="prefs-item-value">
-                      <Select
-                        value={settings.downloads.paths.find(p => p.active)?.name || settings.downloads.paths[0]?.name}
-                        onValueChange={(selectedName) => {
-                          // Set only the selected path as active
-                          const newPaths = settings.downloads.paths.map(p => ({
-                            ...p,
-                            active: p.name === selectedName
-                          }));
-                          updateSettings('downloads', { paths: newPaths });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select path" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Download Path</SelectLabel>
-                            {settings.downloads.paths.map((p) => (
-                              <SelectItem key={p.name} value={p.name}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                {!settings.downloads.useTempPath && (
+                  <div className="prefs-item">
+                    <div className="prefs-item-content">
+                      <div className="prefs-title-wrapper">
+                        <div className="prefs-item-title !text-foreground">Download Path</div>
+                        <div className="prefs-item-desc !text-foreground/50">Change the default download path.</div>
+                      </div>
+                      <div className="prefs-item-value">
+                        <Select
+                          value={settings.downloads.paths.find(p => p.active)?.name || settings.downloads.paths[0]?.name}
+                          onValueChange={(selectedName) => {
+                            // Set only the selected path as active
+                            const newPaths = settings.downloads.paths.map(p => ({
+                              ...p,
+                              active: p.name === selectedName
+                            }));
+                            updateSettings('downloads', { paths: newPaths });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select path" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Download Path</SelectLabel>
+                              {settings.downloads.paths.map((p) => (
+                                <SelectItem key={p.name} value={p.name}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
-                </div>
-
+                )}
 
                 {/* <div className="prefs-item">
                   <div className="prefs-item-content">
@@ -889,7 +902,8 @@ export function Download({ active }: DownloadProps) {
                           videoUrl,
                           outputPath,
                           settings.main?.type || 'mp3',
-                          settings.main?.quality || 'medium'
+                          settings.main?.quality || 'medium',
+                          settings.downloads?.useTempPath 
                         );
                       } else {
                         toast.error("No valid video details available to download.");

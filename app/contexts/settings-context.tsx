@@ -7,6 +7,7 @@ interface Settings {
   appearance: { theme: string };
   debugging: { boundingBoxes: boolean };
   downloads: { 
+    useTempPath?: boolean;
     paths: { name: string; path: string; active: boolean }[];
   };
   soundpad: { enabled: boolean; port: string };
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: Settings = {
   appearance: { theme: 'system' },
   debugging: { boundingBoxes: false },
   downloads: {
+    useTempPath: false,
     paths: [{ name: "asp-downloads", path: "~/Downloads/asp-downloads", active: true }]
   },
   soundpad: { enabled: false, port: '8844' },
@@ -50,7 +52,11 @@ function initializeSettings(): Settings {
     const mergedSettings: Settings = {
       appearance: { ...DEFAULT_SETTINGS.appearance, ...parsed.appearance },
       debugging: { ...DEFAULT_SETTINGS.debugging, ...parsed.debugging },
-      downloads: { ...DEFAULT_SETTINGS.downloads, ...parsed.downloads },
+      downloads: { 
+        ...DEFAULT_SETTINGS.downloads, 
+        ...parsed.downloads,
+        useTempPath: parsed.downloads?.useTempPath ?? DEFAULT_SETTINGS.downloads.useTempPath // ensure key exists
+      },
       soundpad: { ...DEFAULT_SETTINGS.soundpad, ...parsed.soundpad },
       main: { ...DEFAULT_SETTINGS.main, ...parsed.main }
     };

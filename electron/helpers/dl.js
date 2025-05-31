@@ -320,22 +320,8 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
                         args.push('--audio-format', 'mp3');
                         args.push('--audio-quality', '0');
                     } else {
-                        // For mp4 downloads
-                        if (attempt === 1) {
-                            // First attempt with specified format quality
-                            if (preset.format) {
-                                args.push('--format', preset.format);
-                            }
-                            args.push('--merge-output-format', 'mp4');
-                        } else if (attempt === 2) {
-                            // Second attempt with simpler format (safer)
-                            args.push('--format', 'bv*[height<=720]+ba/b[height<=720]/best');
-                            args.push('--merge-output-format', 'mp4');
-                        } else {
-                            // Last attempt: use simplest format
-                            args.push('--format', 'best');
-                            args.push('--recode-video', 'mp4');
-                        }
+                        args.push('--format', 'best');
+                        args.push('--recode-video', 'mp4');
                     }
                     
                     console.log(`Command: ${ytdlpPath} ${args.join(' ')}`);
@@ -455,17 +441,8 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
                         options.audioFormat = 'mp3';
                         options.audioQuality = 0;
                     } else {
-                        // mp4 specific options
-                        if (attempt === 1) {
-                            if (preset.format) options.format = preset.format;
-                            options.mergeOutputFormat = 'mp4';
-                        } else if (attempt === 2) {
-                            options.format = 'bv*[height<=720]+ba/b[height<=720]/best';
-                            options.mergeOutputFormat = 'mp4';
-                        } else {
-                            options.format = 'best';
-                            options.recodeVideo = 'mp4';
-                        }
+                        options.format = 'best';
+                        options.remuxVideo = 'mp4';
                     }
                     
                     console.log(`Download attempt ${attempt}/${maxAttempts} with options:`, options);

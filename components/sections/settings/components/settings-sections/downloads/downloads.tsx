@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DownloadIcon, FolderSearchIcon, RotateCwIcon, TriangleAlertIcon, PlusIcon, CircleXIcon } from "lucide-react";
 import { PathList } from "./components/path-list";
 import { SettingsSectionHeader } from "../../settings-section-header";
+import { Checkbox } from "@/components/ui/checkbox";
 import SettingsPrefWrapper from "../../settings-pref-wrapper";
 import {
   Tooltip,
@@ -202,6 +203,13 @@ export default function SettingsDownloads() {
     return true;
   };
 
+  const useTempPath = settings.downloads?.useTempPath ?? false;
+
+  // Handler for the checkbox
+  const handleTempPathToggle = (checked: boolean) => {
+    updateSettings('downloads', { ...settings.downloads, useTempPath: checked });
+  };
+
   return (
     <div className="h-full w-full p-4">
       <SettingsSectionHeader 
@@ -212,82 +220,95 @@ export default function SettingsDownloads() {
 
       <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
         <SettingsPrefWrapper
-          title="Add Download Path"
-          description="Add a new download path. The first path is the default and cannot be removed."
-          extra={
-            tempPath && !isWindowsAbsolutePath(tempPath) ? (
-              <div className="flex items-center gap-4">
-                <div className="text-red-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-red-500 rounded-md p-2 bg-red-500/10">
-                  <CircleXIcon size={20} className="flex shrink-0" />
-                  Not a valid Windows path. Cannot use: <span className="font-mono">&lt; &gt; : " / \ | ? *</span>
-                </div>
-              </div>
-            ) : isPathValid === false && tempPath && isWindowsAbsolutePath(tempPath) ? (
-              <div className="flex items-center gap-4">
-                <div className="text-amber-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-amber-500 rounded-md p-2 bg-amber-500/10">
-                  <TriangleAlertIcon size={20} className="flex shrink-0" />
-                  Download path doesn't exist, a new path will be made when you use the download feature.
-                </div>
-                <Button
-                  variant={'ghost'}
-                  onClick={handleValidate}
-                >
-                  <RotateCwIcon />
-                </Button>
-              </div>
-            ) : null
-          }
+          title="Use Temporary Path"
+          description="Enable temporary path for downloads. This will use open file explorer after the file downloads and let you choose the download location temporarily."
         >
-          <Input
-            className="w-full"
-            placeholder="path"
-            value={tempPath}
-            onChange={e => setTempPath(e.target.value)}
-            spellCheck={false}
+          <Checkbox 
+            className="size-6"
+            checked={useTempPath}
+            onCheckedChange={handleTempPathToggle}
           />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant={'outline'}
-                  onClick={handlePickFolder}
-                >
-                  <FolderSearchIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Use explorer</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  onClick={handleAddPath}
-                  disabled={
-                    !tempPath.trim() ||
-                    !isWindowsAbsolutePath(tempPath) ||
-                    hasInvalidWindowsChars(tempPath) ||
-                    hasInvalidWindowsSymbols(tempPath)
-                  }
-                >
-                  <PlusIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add path</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </SettingsPrefWrapper>
+        
+        <div className={useTempPath ? "opacity-50 pointer-events-none transition-all gap-4 flex flex-col" : "transition-all gap-4 flex flex-col"}>
+          <SettingsPrefWrapper
+            title="Add Download Path"
+            description="Add a new download path. The first path is the default and cannot be removed."
+            extra={
+              tempPath && !isWindowsAbsolutePath(tempPath) ? (
+                <div className="flex items-center gap-4">
+                  <div className="text-red-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-red-500 rounded-md p-2 bg-red-500/10">
+                    <CircleXIcon size={20} className="flex shrink-0" />
+                    Not a valid Windows path. Cannot use: <span className="font-mono">&lt; &gt; : " / \ | ? *</span>
+                  </div>
+                </div>
+              ) : isPathValid === false && tempPath && isWindowsAbsolutePath(tempPath) ? (
+                <div className="flex items-center gap-4">
+                  <div className="text-amber-500 text-sm flex-row flex items-center justify-center gap-2 border-1 border-amber-500 rounded-md p-2 bg-amber-500/10">
+                    <TriangleAlertIcon size={20} className="flex shrink-0" />
+                    Download path doesn't exist, a new path will be made when you use the download feature.
+                  </div>
+                  <Button
+                    variant={'ghost'}
+                    onClick={handleValidate}
+                  >
+                    <RotateCwIcon />
+                  </Button>
+                </div>
+              ) : null
+            }
+          >
+            <Input
+              className="w-full"
+              placeholder="path"
+              value={tempPath}
+              onChange={e => setTempPath(e.target.value)}
+              spellCheck={false}
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant={'outline'}
+                    onClick={handlePickFolder}
+                  >
+                    <FolderSearchIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Use explorer</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-        <PathList
-          paths={paths}
-          onRemove={handleRemovePath}
-          onRename={handleRenamePath}
-        />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={handleAddPath}
+                    disabled={
+                      !tempPath.trim() ||
+                      !isWindowsAbsolutePath(tempPath) ||
+                      hasInvalidWindowsChars(tempPath) ||
+                      hasInvalidWindowsSymbols(tempPath)
+                    }
+                  >
+                    <PlusIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add path</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </SettingsPrefWrapper>
+
+          <PathList
+            paths={paths}
+            onRemove={handleRemovePath}
+            onRename={handleRenamePath}
+          />
+        </div>
       </div>
     </div>
   );

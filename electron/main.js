@@ -185,11 +185,56 @@ ipcMain.on('videoInfo', async (event, url, requestId) => {
   }
 });
 
-ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality) => {
+ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality, useTempPath) => {
   const { downloadVideo } = require('./helpers/dl.js');
   try {
-    const result = await downloadVideo(url, outputPath, format, quality);
-    event.reply('downloadResponse', result);
+    let finalOutputPath = outputPath;
+    let result = null;
+
+    // Download to temp if useTempPath is enabled
+    if (useTempPath) {
+      const os = require('os');
+      const path = require('path');
+      const fs = require('fs');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asp-tmp-'));
+      finalOutputPath = tempDir;
+
+      // Download to temp folder first
+      result = await downloadVideo(url, finalOutputPath, format, quality);
+
+      // Prompt user for file save location (Save As dialog)
+      const { dialog } = require('electron');
+      const pathModule = require('path');
+      const BrowserWindow = require('electron').BrowserWindow;
+
+      if (result) {
+        const fileName = pathModule.basename(result);
+        const { canceled, filePath } = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+          title: 'Save Downloaded File',
+          defaultPath: fileName,
+          buttonLabel: 'Save',
+          filters: [
+            { name: 'Media Files', extensions: [format] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+
+        if (!canceled && filePath) {
+          fs.copyFileSync(result, filePath);
+          // Do NOT open the folder here
+          event.reply('downloadResponse', filePath);
+          return;
+        } else {
+          // User canceled, just return nothing or handle as needed
+          event.reply('downloadResponse', null);
+          return;
+        }
+      }
+    } else {
+      // Normal download
+      result = await downloadVideo(url, finalOutputPath, format, quality);
+      event.reply('downloadResponse', result);
+    }
   } catch (error) {
     event.reply('downloadError', error.message);
   }
