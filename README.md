@@ -33,4 +33,5 @@ File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/i
 ---
 
 # TODO
-- fix built external stuff (ytdlp, etc)
+- fix mp4 opus file type issue
+- add a download option where the user chooses where the file will go after its downloaded
