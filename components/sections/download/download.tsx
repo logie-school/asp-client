@@ -194,7 +194,7 @@ export function Download({ active }: DownloadProps) {
       setVideoDetails(null);
       setVideoTitle("Video Title");
       setVideoDescription("");
-      setAvgColor(defaultBgColor);
+      setAvgColor(defaultBgColor); // <-- Reset color immediately
       setIsLoading(false);
       setDownloadButtonLoading(false); // <--- Add this line
       setImageLoaded(false);
@@ -286,41 +286,54 @@ export function Download({ active }: DownloadProps) {
     return `rgb(${r}, ${g}, ${b})`;
   };
 
-  // Replace the existing getProxiedImageUrl function with our imported one
-  const handleImageLoad = async (url: string) => {
+  // Update handleImageLoad to check videoUrl before setting state
+  const handleImageLoad = async (url: string, requestId: number) => {
     try {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.src = getProxiedImageUrl(url);
-      
+
       img.onload = () => {
+        // Only set color if this is the latest request and videoUrl is not empty
+        if (requestIdRef.current !== requestId || !videoUrl) return;
         const avgColor = getAverageColor(img);
         setAvgColor(avgColor);
         setImageLoaded(true);
       };
     } catch (error) {
-      console.error('Error loading image:', error);
       setImageLoaded(false);
     }
   };
 
-  // Update the response handler to use the proxy
+  // Update the response handler to check videoUrl before updating state
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const responseHandler = (details: VideoDetails, responseRequestId?: number) => {
-        if (responseRequestId === requestIdRef.current) {
+        // Only handle response if it's for the latest request and videoUrl is not empty
+        if (responseRequestId !== requestIdRef.current || !videoUrl) return;
+        if (details && details.title) {
           setVideoDetails(details);
-          setVideoTitle(details.title);
-          setVideoDescription(details.description);
-          setDownloadButtonActive(true);
-          setInfoButtonActive(true);
+          setDownloadStatus("ready");
+          setVideoTitle(details.title || "Video Title");
+          setVideoDescription(details.description || "No description available");
           setIsLoading(false);
           setDownloadButtonLoading(false);
-          
-          // Use the proxied image URL
+          setDownloadButtonActive(true);
+          setInfoButtonActive(true);
+
+          // Use the proxied image URL and pass the requestId
           if (details.thumbnail) {
-            handleImageLoad(details.thumbnail);
+            handleImageLoad(details.thumbnail, requestIdRef.current);
           }
+        } else {
+          setDownloadStatus("idle");
+          setVideoDetails(null);
+          setDownloadButtonActive(false);
+          setInfoButtonActive(false);
+          setIsLoading(false);
+          setDownloadButtonLoading(false);
+          setImageLoaded(false);
+          toast.error("Invalid video data received");
         }
       };
 
