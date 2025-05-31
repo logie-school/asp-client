@@ -33,4 +33,5 @@ File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/i
 ---
 
 # TODO
-- fix the bug where the backgound for the thumbnail preview still gets updates if the user inputs then quickly deletes the link
+- ~~fix the bug where the backgound for the thumbnail preview still gets updates if the user inputs then quickly deletes the link~~
+- publish 0.1.3
