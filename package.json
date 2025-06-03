@@ -37,6 +37,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@tanstack/react-table": "^8.21.2",
+    "axios": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^9.1.2",
@@ -105,9 +106,14 @@
     "files": [
       "out/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "soundpad-server/**/*"
     ],
     "extraResources": [
+      {
+        "from": "soundpad-server",
+        "to": "soundpad-server"
+      },
       {
         "from": "ffmpeg",
         "to": "ffmpeg"
@@ -122,6 +128,7 @@
       }
     ],
     "asarUnpack": [
+      "soundpad-server/**/*",
       "resources/ffmpeg/**/*",
       "resources/yt-dlp-exec/**/*",
       "resources/ffmpeg-static/**/*"

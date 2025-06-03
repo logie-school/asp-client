@@ -23,17 +23,16 @@ export default function SoundpadExtension() {
   // Function to get soundpad status
   const getSoundpadStatus = async () => {
     try {
-      // send the current port
       const resp: { status: string; message: string } =
         await window.api.invoke('get-soundpad-status', soundpadSettings.port);
-      if (resp.status === "ok") {
+      if (resp.status === 'ok') {
         toast.success(resp.message);
       } else {
         toast.error(resp.message);
       }
-    } catch (error) {
-      console.error("Error checking Soundpad status:", error);
-      toast.error("Failed to check Soundpad status.");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Unknown error checking Soundpad status');
     }
   };
 

@@ -1,31 +1,25 @@
-const { spawn, spawnSync } = require('child_process'); // Import spawnSync
 const path = require('path');
-const { app } = require('electron');
 const fs = require('fs');
-const axios = require('axios'); // Ensure axios is installed: npm install axios
-
-let soundpadProcess = null;
+const { app } = require('electron');
+const { spawn, spawnSync } = require('child_process');
 
 function getSoundpadServerPath() {
-    const serverExecutableName = 'asp-server.exe';
-    let serverPath;
-
-    if (app.isPackaged) {
-        // In packaged app, resourcesPath points to the 'resources' directory
-        serverPath = path.join(process.resourcesPath, 'soundpad-server', serverExecutableName);
-    } else {
-        // In development, construct path relative to project root
-        // __dirname is electron/helpers, so ../../ goes to project root
-        serverPath = path.join(app.getAppPath(), 'soundpad-server', serverExecutableName);
-    }
-
-    console.log(`[Soundpad] Attempting to use server at: ${serverPath}`);
-    if (!fs.existsSync(serverPath)) {
-        console.error(`[Soundpad] ERROR: ${serverExecutableName} not found at ${serverPath}`);
-        return null;
-    }
-    return serverPath;
+  let serverPath;
+  if (app.isPackaged) {
+    // resourcesPath points to <MyApp>/resources
+    serverPath = path.join(process.resourcesPath, 'soundpad-server', 'asp-server.exe');
+  } else {
+    // dev: project root/soundpad-server
+    serverPath = path.join(app.getAppPath(), 'soundpad-server', 'asp-server.exe');
+  }
+  if (!fs.existsSync(serverPath)) {
+    console.error('[Soundpad] exe not found at', serverPath);
+    return null;
+  }
+  return serverPath;
 }
+
+let soundpadProcess = null;
 
 function startSoundpadServer() {
     if (soundpadProcess) {
