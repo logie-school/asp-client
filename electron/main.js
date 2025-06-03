@@ -265,6 +265,20 @@ ipcMain.handle('addToSoundpad', async (_event, filePath, port) => {
   }
 })
 
+// handle status check from renderer
+ipcMain.handle('get-soundpad-status', async (_event, portArg) => {
+  const port = portArg || soundpadPort;
+  try {
+    const { data } = await axios.get(`http://localhost:${port}/status`);
+    // data is { status: "ok"|"error", message: string }
+    return data;
+  } catch (err) {
+    // if server responded with JSON error body
+    if (err.response?.data) return err.response.data;
+    return { status: "error", message: "Cannot reach Soundpad server." };
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
   startSoundpadServer(); // Start Soundpad server when the app is ready

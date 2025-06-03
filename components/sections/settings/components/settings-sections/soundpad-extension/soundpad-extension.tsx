@@ -1,4 +1,4 @@
-import { FileAudioIcon, CircleXIcon } from "lucide-react";
+import { FileAudioIcon, CircleXIcon, Check } from "lucide-react";
 import { SettingsSectionHeader } from "../../settings-section-header";
 import SettingsPrefWrapper from "../../settings-pref-wrapper";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useSettings } from "@/app/contexts/settings-context";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 // defaults
 const DEFAULT_SOUNDPAD_SETTINGS = {
@@ -18,6 +19,23 @@ const MAX_PORT = 65535;
 
 export default function SoundpadExtension() {
   const { settings, updateSettings } = useSettings();
+
+  // Function to get soundpad status
+  const getSoundpadStatus = async () => {
+    try {
+      // send the current port
+      const resp: { status: string; message: string } =
+        await window.api.invoke('get-soundpad-status', soundpadSettings.port);
+      if (resp.status === "ok") {
+        toast.success(resp.message);
+      } else {
+        toast.error(resp.message);
+      }
+    } catch (error) {
+      console.error("Error checking Soundpad status:", error);
+      toast.error("Failed to check Soundpad status.");
+    }
+  };
 
   // Get soundpad settings with defaults
   const soundpadSettings = {
@@ -83,22 +101,39 @@ export default function SoundpadExtension() {
 
   return (
     <div className="h-full w-full p-4">
-        <SettingsSectionHeader 
-            title="Soundpad Extension"
-            description="Manage Soundpad extension settings."
-            icon={<FileAudioIcon className="opacity-50" />}
-        />
+      <SettingsSectionHeader 
+        title="Soundpad Extension"
+        description="Manage Soundpad extension settings (asp-server.exe)."
+        icon={<FileAudioIcon className="opacity-50" />}
+      />
 
-        <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
+      <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
+        
+        <SettingsPrefWrapper
+          title="Enable Soundpad Extension"
+          description="Toggle the Soundpad extension on or off."
+        >
+          <Checkbox 
+            className="size-6"
+            checked={soundpadSettings.enabled}
+            onCheckedChange={checked => handleSettingChange('enabled', checked as boolean)}
+          />
+        </SettingsPrefWrapper>
+
+        {/* wrap and grey out when disabled */}
+        <div className={
+            soundpadSettings.enabled
+              ? "transition-all flex flex-col gap-4"
+              : "opacity-50 pointer-events-none transition-all flex flex-col gap-4"
+          }
+        >
           <SettingsPrefWrapper
-            title="Enable Soundpad Extension"
-            description="Toggle the Soundpad extension on or off."
+            title="Soundpad Status"
+            description="See if the background server can talk to Soundpad."
           >
-            <Checkbox 
-              className="size-6"
-              checked={soundpadSettings.enabled}
-              onCheckedChange={(checked) => handleSettingChange('enabled', checked as boolean)}
-            />
+            <Button variant="outline" onClick={getSoundpadStatus}>
+              Check
+            </Button>
           </SettingsPrefWrapper>
 
           <SettingsPrefWrapper
@@ -120,9 +155,11 @@ export default function SoundpadExtension() {
               onBlur={handlePortBlur}
               inputMode="numeric"
               pattern="[0-9]*"
+              disabled={!soundpadSettings.enabled}
             />
           </SettingsPrefWrapper>
         </div>
+      </div>
     </div>
   );
 }
