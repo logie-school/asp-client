@@ -14,10 +14,13 @@ extraResources:
     to: "yt-dlp-exec/bin"
   - from: "./node_modules/ffmpeg-static"
     to: "ffmpeg-static"
+  - from: "soundpad-server" # This will copy the entire soundpad-server folder
+    to: "soundpad-server"   # to the resources directory
 asarUnpack:
   - "resources/ffmpeg/**/*"
   - "resources/yt-dlp-exec/**/*"
   - "resources/ffmpeg-static/**/*"
+  - "resources/soundpad-server/**/*" # Ensure the server executable is not packed into asar if it has issues running from there
 asar: true
 win:
   target:

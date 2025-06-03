@@ -10,7 +10,7 @@ import { toast } from "sonner";
 // defaults
 const DEFAULT_SOUNDPAD_SETTINGS = {
   enabled: false,
-  port: "8844"
+  port: "8866"
 };
 
 const MIN_PORT = 1;

@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { DownloadIcon, MoveUpRight, InfoIcon, SlidersVertical, Loader, Eye, ThumbsUp, DotIcon } from "lucide-react";
 
@@ -603,11 +604,11 @@ export function Download({ active }: DownloadProps) {
                         <div className="opacity-60 w-full mb-4 text-center">
                           {settings.downloads.useTempPath ? (
                             <div className="opacity-60 w-full text-center">
-                              Your video has been saved, put in a new link to download another.
+                              File has been saved, put in a new link to download another.
                             </div>
                           ) : (
                             <div className="opacity-60 w-full text-center">
-                              Your video has been saved to {downloadedPath || "the selected path"}, put in a new link to download another.
+                              File has been saved to {downloadedPath || "the selected path"}, put in a new link to download another.
                             </div>
                           )}
                         </div>
@@ -784,6 +785,30 @@ export function Download({ active }: DownloadProps) {
                   </div>
                 )}
 
+                {/* Show this section only if Soundpad extension is enabled */}
+                {settings.soundpad.enabled && (
+                  <div className="prefs-item">
+                    <div className="prefs-item-content">
+                      <div className="prefs-title-wrapper">
+                        <div className="prefs-item-title !text-foreground">Add To Soundpad</div>
+                        <div className="prefs-item-desc !text-foreground/50">Automatically add downloaded audio to Soundpad.</div>
+                      </div>
+                      <div className="prefs-item-value">
+                        <Checkbox
+                          className="size-6"
+                          checked={!!settings.main?.addToSoundpad}
+                          onCheckedChange={(checked) => {
+                            updateSettings('main', {
+                              ...settings.main,
+                              addToSoundpad: checked
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* <div className="prefs-item">
                   <div className="prefs-item-content">
                     <div className="prefs-title-wrapper">
@@ -874,7 +899,38 @@ export function Download({ active }: DownloadProps) {
                           if (typeof result === "string" && result) {
                             setDownloadedPath(result); // Save the path
                             setDownloadStatus("complete");
-                            toast.success("Download complete");
+                            // if using soundpad have seperate logic
+                            if (settings.main?.addToSoundpad && settings.soundpad.enabled) {
+                              const filePath = result;
+                              const port = settings.soundpad.port || 8866; // Default to 8866 if not set
+                              
+                              const addSoundToSoundpad = async (filePath: string, port: number) => {
+                                const res = await window.api.invoke('addToSoundpad', filePath, port)
+                                if ('error' in res && res.error) {
+                                  // now throw in renderer, which you already .catch below
+                                  throw new Error(res.error)
+                                }
+                                console.log(`[Soundpad] Added sound: ${filePath}. Server response:`, res.data)
+                                return res.data
+                              }
+
+                              addSoundToSoundpad(filePath, Number(port))
+                                .then(() => toast.success("Download complete and added to Soundpad"))
+                                .catch((error: any) => {
+                                  let msg = error.message || error
+                                  if (msg.includes("503")) {
+                                    msg = "Soundpad is not running."
+                                  }
+                                  toast.error(`Download complete, but failed to add to Soundpad: ${msg}`);
+                                });
+                            } else {
+                              toast.success("Download complete");
+                            }
+                            
+                          } else if (result === null) {
+                            // User cancelled the save dialog
+                            setDownloadStatus("ready");
+                            toast.warning("Download cancelled by user.");
                           } else {
                             setDownloadStatus("ready");
                             toast.error("Download failed.");

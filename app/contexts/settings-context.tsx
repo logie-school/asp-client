@@ -11,10 +11,11 @@ interface Settings {
     paths: { name: string; path: string; active: boolean }[];
   };
   soundpad: { enabled: boolean; port: string };
-  main: {
-    quality: string;
-    type: string;
-    preview: string;
+  main?: {
+    quality?: string;
+    type?: string;
+    preview?: string;
+    addToSoundpad?: boolean;
   };
 }
 
@@ -25,11 +26,12 @@ const DEFAULT_SETTINGS: Settings = {
     useTempPath: false,
     paths: [{ name: "asp-downloads", path: "~/Downloads/asp-downloads", active: true }]
   },
-  soundpad: { enabled: false, port: '8844' },
+  soundpad: { enabled: false, port: '8866' }, // Changed default port to 8866
   main: {
     quality: 'high',
     type: 'mp3',
-    preview: 'image'
+    preview: 'image',
+    addToSoundpad: false // Ensure addToSoundpad has a default in main
   }
 };
 
@@ -55,10 +57,18 @@ function initializeSettings(): Settings {
       downloads: { 
         ...DEFAULT_SETTINGS.downloads, 
         ...parsed.downloads,
-        useTempPath: parsed.downloads?.useTempPath ?? DEFAULT_SETTINGS.downloads.useTempPath // ensure key exists
+        useTempPath: parsed.downloads?.useTempPath ?? DEFAULT_SETTINGS.downloads.useTempPath
       },
-      soundpad: { ...DEFAULT_SETTINGS.soundpad, ...parsed.soundpad },
-      main: { ...DEFAULT_SETTINGS.main, ...parsed.main }
+      soundpad: { 
+        ...DEFAULT_SETTINGS.soundpad, // Ensure soundpad section is merged
+        ...parsed.soundpad,
+        port: parsed.soundpad?.port || DEFAULT_SETTINGS.soundpad.port // Ensure port has a default
+      },
+      main: { 
+        ...DEFAULT_SETTINGS.main, 
+        ...parsed.main,
+        addToSoundpad: parsed.main?.addToSoundpad ?? DEFAULT_SETTINGS.main!.addToSoundpad // Ensure addToSoundpad is merged
+      }
     };
 
     // Always write back the merged settings to ensure completeness
@@ -82,11 +92,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sync settings to localStorage on every change
+  // Sync settings to localStorage and send to main process on every change
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('settings', JSON.stringify(settings));
       window.dispatchEvent(new Event('settingsChanged'));
+      // Send settings to the main process
+      if (window.api && window.api.send) {
+        window.api.send('settings-updated', settings);
+      }
     }
   }, [settings]);
 

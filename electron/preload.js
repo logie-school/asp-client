@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('api', {
       'minimizeApp',
       'videoInfo',
       'downloadVideo',
+      'addToSoundpad', // Add this line
+      'settings-updated'
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, ...args);
@@ -20,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
       'videoInfoError',
       'downloadResponse',
       'downloadError',
+      'soundpadResponse', // Add this line
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.removeAllListeners(channel);
@@ -33,6 +36,7 @@ contextBridge.exposeInMainWorld('api', {
       'videoInfoError',
       'downloadResponse',
       'downloadError',
+      'soundpadResponse', // Add this line
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.removeListener(channel, func);
@@ -42,7 +46,8 @@ contextBridge.exposeInMainWorld('api', {
     const validChannels = [
       'open-folder-dialog',
       'validate-path',
-      'open-download-folder'
+      'open-download-folder',
+      'addToSoundpad'  // ← Add this here
     ];
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);

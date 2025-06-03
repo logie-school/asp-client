@@ -10,11 +10,27 @@ const handler = require('serve-handler');
 const { validatePath } = require('./helpers/validatePath');
 const { openFolderDialog } = require('./helpers/dialog');
 const { openFolder } = require('./helpers/openFolder');
+const { startSoundpadServer, stopSoundpadServer } = require('./helpers/soundpad');
+const axios = require('axios');
 
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development';
 const PROXY_PORT = 8855;
 const STATIC_PORT = 8844; // Port for static files in production
+let soundpadPort = 8866; // Default Soundpad port
+
+// Function to update the Soundpad port
+const updateSoundpadPort = (port) => {
+  soundpadPort = port;
+  console.log(`[Main] Soundpad port updated to: ${soundpadPort}`);
+};
+
+// Listen for settings updates from the renderer process
+ipcMain.on('settings-updated', (event, settings) => {
+  if (settings && settings.soundpad && settings.soundpad.port) {
+    updateSoundpadPort(settings.soundpad.port);
+  }
+});
 
 // Create both proxy and static file servers for production
 const setupServers = () => {
@@ -117,43 +133,30 @@ const createWindow = () => {
 
   // Update CSP to allow connecting to proxy server in both dev and prod
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    // Default CSP for production
-    let csp =
-      "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline'; " +
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-      "font-src 'self' https://fonts.gstatic.com; " +
-      "img-src 'self' data: http://localhost:8855 localhost:8855; " +
-      "connect-src 'self' localhost:8855;";
+    let cspValue;
 
-    // In development, allow 'unsafe-eval' for Next.js Fast Refresh
     if (isDev) {
-      csp =
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-        "font-src 'self' https://fonts.gstatic.com; " +
-        "img-src 'self' data: http://localhost:8855 localhost:8855; " +
-        "connect-src 'self' localhost:8855 ws://localhost:3000 ws://127.0.0.1:3000;";
+      // Looser CSP for development to allow easier debugging with localhost
+      cspValue = `default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 http://127.0.0.1:3000; 
+                  script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 http://127.0.0.1:3000; 
+                  style-src 'self' 'unsafe-inline' http://localhost:3000 http://127.0.0.1:3000 https://fonts.googleapis.com; 
+                  img-src 'self' data: http://localhost:3000 http://127.0.0.1:3000 http://localhost:${PROXY_PORT} http://127.0.0.1:${PROXY_PORT}; 
+                  connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:3000 http://localhost:${PROXY_PORT} http://127.0.0.1:${PROXY_PORT} http://localhost:${soundpadPort} http://127.0.0.1:${soundpadPort} ws://localhost:${soundpadPort} ws://127.0.0.1:${soundpadPort}; 
+                  font-src 'self' https://fonts.gstatic.com;`;
+    } else {
+      // Stricter CSP for production
+      cspValue = `default-src 'self'; 
+                  script-src 'self' 'unsafe-inline'; 
+                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+                  img-src 'self' data: http://localhost:${PROXY_PORT}; 
+                  connect-src 'self' http://localhost:${PROXY_PORT} http://localhost:${soundpadPort} http://127.0.0.1:${soundpadPort} ws://localhost:${soundpadPort} ws://127.0.0.1:${soundpadPort};
+                  font-src 'self' https://fonts.gstatic.com;`;
     }
 
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        "Content-Security-Policy": [
-          isDev 
-            ? `default-src 'self' localhost:3000; 
-               script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:3000; 
-               style-src 'self' 'unsafe-inline' localhost:3000; 
-               img-src 'self' data: localhost:3000 localhost:${PROXY_PORT}; 
-               connect-src 'self' localhost:3000 localhost:${PROXY_PORT} ws://localhost:3000;`
-            : `default-src 'self' localhost:${STATIC_PORT}; 
-               script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:${STATIC_PORT}; 
-               style-src 'self' 'unsafe-inline' localhost:${STATIC_PORT}; 
-               img-src 'self' data: localhost:${STATIC_PORT} localhost:${PROXY_PORT}; 
-               connect-src 'self' localhost:${STATIC_PORT} localhost:${PROXY_PORT};
-               font-src 'self' data:;`,
-        ],
+        "Content-Security-Policy": [cspValue],
       },
     });
   });
@@ -251,8 +254,20 @@ ipcMain.on('openFile', (event, filePath) => {
   }
 });
 
+ipcMain.handle('addToSoundpad', async (_event, filePath, port) => {
+  const url = `http://localhost:${port}/add`
+  try {
+    const { data } = await axios.post(url, { path: filePath })
+    return { data }
+  } catch (err) {
+    // never throw – always resolve with an error shape
+    return { error: err.message ?? 'Soundpad request failed.' }
+  }
+})
+
 app.whenReady().then(() => {
   createWindow();
+  startSoundpadServer(); // Start Soundpad server when the app is ready
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -269,6 +284,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('will-quit', () => {
+  stopSoundpadServer(); // Ensure server is stopped before app fully quits
 });
 
 // Add error handlers for the servers
