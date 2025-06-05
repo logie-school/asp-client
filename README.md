@@ -33,6 +33,4 @@ File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/i
 ---
 
 # TODO
-- ~~fix the bug where the backgound for the thumbnail preview still gets updates if the user inputs then quickly deletes the link~~
-- publish 0.1.3
-- frankenstien together 0.1.4, logic is ther it just needs to work
+- fix quality selector
