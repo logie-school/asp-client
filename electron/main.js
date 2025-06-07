@@ -12,6 +12,7 @@ const { openFolderDialog } = require('./helpers/dialog');
 const { openFolder } = require('./helpers/openFolder');
 const { startSoundpadServer, stopSoundpadServer } = require('./helpers/soundpad');
 const axios = require('axios');
+const os = require('os');
 
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development';
@@ -279,6 +280,22 @@ ipcMain.handle('get-soundpad-status', async (_event, portArg) => {
   }
 });
 
+ipcMain.handle('open-path', async (_event, pathToOpen) => {
+  // expand "~" to the user's home directory
+  let resolvedPath = pathToOpen;
+  if (resolvedPath.startsWith('~')) {
+    resolvedPath = path.join(os.homedir(), resolvedPath.slice(1));
+  }
+
+  try {
+    await shell.openPath(resolvedPath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening path:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
   startSoundpadServer(); // Start Soundpad server when the app is ready
@@ -312,3 +329,4 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled rejection:', error);
 });
+

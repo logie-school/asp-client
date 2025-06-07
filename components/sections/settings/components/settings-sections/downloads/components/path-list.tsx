@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Ellipsis, PencilIcon, Trash2, Circle, CheckIcon, TriangleAlertIcon, CircleXIcon } from "lucide-react";
+import { Ellipsis, PencilIcon, Trash2, Circle, CheckIcon, TriangleAlertIcon, CircleXIcon, FolderOpenIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,7 +118,7 @@ export function PathList({ paths, onRemove, onRename }: PathListProps) {
             </TableRow>
           ) : (
             paths.map((item, idx) => (
-              <TableRow key={idx} className="text-white/50">
+              <TableRow key={idx} className="text-foreground/50">
                 <TableCell>
                   <Tooltip disableHoverableContent>
                     <TooltipTrigger asChild>
@@ -160,6 +160,11 @@ export function PathList({ paths, onRemove, onRename }: PathListProps) {
                       <DropdownMenuItem onClick={() => handleOpenEdit(idx)}>
                         <PencilIcon />
                         Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        window.api?.invoke?.('open-path', item.path);
+                      }}>
+                        <FolderOpenIcon /> Open in Explorer
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="group hover:!bg-red-500/10"

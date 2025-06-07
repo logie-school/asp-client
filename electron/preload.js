@@ -48,7 +48,8 @@ contextBridge.exposeInMainWorld('api', {
       'validate-path',
       'open-download-folder',
       'addToSoundpad',
-      'get-soundpad-status'    // ← add this
+      'get-soundpad-status',
+      'open-path'
     ];
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);

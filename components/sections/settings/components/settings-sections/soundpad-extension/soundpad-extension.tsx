@@ -99,14 +99,14 @@ export default function SoundpadExtension() {
   const showPortWarning = tempPort !== "" && portNum > MAX_PORT;
 
   return (
-    <div className="h-full w-full p-4">
+    <div className="h-full w-full p-4 pb-0 flex flex-col min-h-0">
       <SettingsSectionHeader 
         title="Soundpad Extension"
         description="Manage Soundpad extension settings (asp-server.exe)."
         icon={<FileAudioIcon className="opacity-50" />}
       />
 
-      <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
+      <div className="flex flex-col gap-4 overflow-y-auto py-4 flex-1 min-h-0">
         
         <SettingsPrefWrapper
           title="Enable Soundpad Extension"

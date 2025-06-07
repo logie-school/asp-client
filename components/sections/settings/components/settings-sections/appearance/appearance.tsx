@@ -21,14 +21,14 @@ export default function SettingsAppearance() {
     };
 
     return (
-        <div className="h-full w-full p-4">
+        <div className="h-full w-full p-4 pb-0 flex flex-col min-h-0">
             <SettingsSectionHeader 
                 title="Appearance"
                 description="Manage the look and feel."
                 icon={<PaletteIcon className="opacity-50" />}
             />
 
-            <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
+            <div className="flex flex-col gap-4 overflow-y-auto py-4 flex-1 min-h-0">
                 <SettingsPrefWrapper
                     title="Theme"
                     description="Choose between light and dark themes."

@@ -211,17 +211,17 @@ export default function SettingsDownloads() {
   };
 
   return (
-    <div className="h-full w-full p-4">
+    <div className="h-full w-full p-4 pb-0 flex flex-col min-h-0">
       <SettingsSectionHeader 
         title="Downloads"
         description="Manage where media is downloaded to and default configuration."
         icon={<DownloadIcon className="opacity-50" />}
       />
 
-      <div className="flex flex-col gap-4 mt-4 h-full overflow-y-auto">
+      <div className="flex flex-col gap-4 overflow-y-auto py-4 flex-1 min-h-0">
         <SettingsPrefWrapper
           title="Use Temporary Path"
-          description="Enable temporary path for downloads. This will use open file explorer after the file downloads and let you choose the download location temporarily."
+          description="This will use file explorer after the file downloads and let you choose the download location temporarily."
         >
           <Checkbox 
             className="size-6"
