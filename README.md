@@ -8,7 +8,7 @@
 ## Getting Started
 
 1. **Download the project**  
-   [asp-client main.zip](https://github.com/logie-school/asp-client/archive/refs/heads/main.zip)
+   [asp-client main.zip]([https://github.com/logie-school/asp-client/archive/refs/heads/main.zip](https://github.com/logie-school/asp-client/releases))
 
 2. **Open a terminal**  
    Navigate to the parent directory of the project.
