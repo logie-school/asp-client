@@ -24,7 +24,7 @@
    npm run dev
    ```
 
-   If the UI doesn't appear, press `Ctrl + R` to compile the UI.
+   If the UI doesn't appear, press `Ctrl + R` to refresh.
 
 ## Found a bug?
 
