@@ -6,8 +6,6 @@
 
 ![asp](https://github.com/user-attachments/assets/ea9fc1e5-c631-454f-99a9-0bd669218cca)
 
----
-
 ## 🔽 Release & Install
 
 1. **Download the latest release**
@@ -16,8 +14,6 @@
 2. **Run the executable**
    Extract the `.zip` and run the `.exe` file inside.
    If prompted by Windows, allow the app through any warnings.
-
----
 
 ## ⚙️ Development
 
@@ -42,13 +38,9 @@
 
    If the UI doesn't appear, press `Ctrl + R` to refresh.
 
----
-
 ## 🐞 Found a bug?
 
 File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/issues)
-
----
 
 ## ✅ TODO
 
