@@ -41,7 +41,3 @@
 ## 🐞 Found a bug?
 
 File an issue here: [GitHub Issues](https://github.com/logie-school/asp-client/issues)
-
-## ✅ TODO
-
-* fix quality selector
