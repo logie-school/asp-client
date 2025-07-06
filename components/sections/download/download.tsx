@@ -513,7 +513,7 @@ export function Download({ active }: DownloadProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
-                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                            <Badge variant={'outline'} style={{ height: "fit-content"}}>
                               <Eye/>
                               {roundNumber(videoDetails.viewCount)}
                             </Badge>
@@ -527,7 +527,7 @@ export function Download({ active }: DownloadProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
-                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                            <Badge variant={'outline'} style={{ height: "fit-content"}}>
                               <ThumbsUp />
                               {roundNumber(videoDetails.likeCount)}
                             </Badge>
@@ -591,7 +591,7 @@ export function Download({ active }: DownloadProps) {
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger>
-                                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                                            <Badge variant={'outline'} style={{ height: "fit-content"}}>
                                               <Eye/>
                                               {roundNumber(videoDetails.viewCount)}
                                             </Badge>
@@ -605,7 +605,7 @@ export function Download({ active }: DownloadProps) {
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger>
-                                            <Badge variant={'outline'} className="hover:bg-input transition-all cursor-default" style={{ height: "fit-content"}}>
+                                            <Badge variant={'outline'} style={{ height: "fit-content"}}>
                                               <ThumbsUp />
                                               {roundNumber(videoDetails.likeCount)}
                                             </Badge>
@@ -871,7 +871,7 @@ export function Download({ active }: DownloadProps) {
                     <div className="prefs-item-content">
                       <div className="prefs-title-wrapper">
                         <div className="prefs-item-title !text-foreground">Add To Soundpad</div>
-                        <div className="prefs-item-desc !text-foreground/50">Automatically add downloaded audio to Soundpad.</div>
+                        <div className="prefs-item-desc !text-foreground/50">Automatically add downloaded audio/video files to Soundpad.</div>
                       </div>
                       <div className="prefs-item-value">
                         <Checkbox
@@ -980,30 +980,55 @@ export function Download({ active }: DownloadProps) {
                             setDownloadedPath(result); // Save the path
                             setDownloadStatus("complete");
                             // if using soundpad have seperate logic
+                            console.log(`[Download] Checking Soundpad integration...`);
+                            console.log(`[Download] addToSoundpad setting: ${settings.main?.addToSoundpad}`);
+                            console.log(`[Download] soundpad enabled: ${settings.soundpad.enabled}`);
+                            
                             if (settings.main?.addToSoundpad && settings.soundpad.enabled) {
                               const filePath = result;
                               const port = settings.soundpad.port || 8866; // Default to 8866 if not set
                               
-                              const addSoundToSoundpad = async (filePath: string, port: number) => {
-                                const res = await window.api.invoke('addToSoundpad', filePath, port)
-                                if ('error' in res && res.error) {
-                                  // now throw in renderer, which you already .catch below
-                                  throw new Error(res.error)
-                                }
-                                console.log(`[Soundpad] Added sound: ${filePath}. Server response:`, res.data)
-                                return res.data
-                              }
-
-                              addSoundToSoundpad(filePath, Number(port))
-                                .then(() => toast.success("Download complete and added to Soundpad"))
-                                .catch((error: any) => {
-                                  let msg = error.message || error
-                                  if (msg.includes("503")) {
-                                    msg = "Soundpad is not running."
+                              // Check if the actual downloaded file is supported by Soundpad
+                              // Server supported extensions: .ac, .flac, .m4a, .mp3, .ogg, .opus, .wav, .wma, .mp4
+                              const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.ogg', '.opus', '.wma', '.ac', '.mp4'];
+                              const fileExtension = filePath.toLowerCase().slice(filePath.lastIndexOf('.'));
+                              const isSupportedFile = supportedExtensions.includes(fileExtension);
+                              
+                              console.log(`[Download] File path: ${filePath}`);
+                              console.log(`[Download] File extension: ${fileExtension}`);
+                              console.log(`[Download] Is supported by Soundpad: ${isSupportedFile}`);
+                              console.log(`[Download] Supported extensions: ${supportedExtensions.join(', ')}`);
+                              
+                              if (isSupportedFile) {
+                                const addSoundToSoundpad = async (filePath: string, port: number) => {
+                                  const res = await window.api.invoke('addToSoundpad', filePath, port)
+                                  if ('error' in res && res.error) {
+                                    // now throw in renderer, which you already .catch below
+                                    throw new Error(res.error)
                                   }
-                                  toast.error(`Download complete, but failed to add to Soundpad: ${msg}`);
-                                });
+                                  console.log(`[Soundpad] Added sound: ${filePath}. Server response:`, res.data)
+                                  return res.data
+                                }
+
+                                addSoundToSoundpad(filePath, Number(port))
+                                  .then(() => {
+                                    console.log(`[Download] Successfully added ${fileExtension} file to Soundpad`);
+                                    toast.success("Download complete and added to Soundpad");
+                                  })
+                                  .catch((error: any) => {
+                                    console.log(`[Download] Failed to add ${fileExtension} file to Soundpad:`, error);
+                                    let msg = error.message || error
+                                    if (msg.includes("503")) {
+                                      msg = "Soundpad is not running."
+                                    }
+                                    toast.error(`Download complete, but failed to add to Soundpad: ${msg}`);
+                                  });
+                              } else {
+                                console.log(`[Download] File type ${fileExtension} not supported by Soundpad - showing unsupported message`);
+                                toast.success("Download complete (unsupported file type for Soundpad)");
+                              }
                             } else {
+                              console.log(`[Download] Soundpad integration not enabled or setting disabled`);
                               toast.success("Download complete");
                             }
                             

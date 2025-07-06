@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { FileAudioIcon, FileVideoIcon, FolderIcon, SearchIcon } from "lucide-react";
+import { FileAudioIcon, FileVideoIcon, FolderIcon, GalleryVerticalEndIcon, SearchIcon } from "lucide-react";
 
 interface GalleryProps {
   active?: boolean;
@@ -103,7 +103,7 @@ export function Gallery({ active }: GalleryProps) {
     const searchLower = searchTerm.toLowerCase().trim();
     const searchWords = searchLower.split(/\s+/);
 
-    return pathFiles.map(pathFile => {
+    const pathFilesWithScores = pathFiles.map(pathFile => {
       const filteredFiles = pathFile.files
         .map(file => {
           let score = 0;
@@ -153,11 +153,30 @@ export function Gallery({ active }: GalleryProps) {
         .filter(file => file.searchScore > 0)
         .sort((a, b) => b.searchScore - a.searchScore);
 
+      // Calculate folder relevance score based on its files
+      let folderScore = 0;
+      if (filteredFiles.length > 0) {
+        // Average score of all matching files
+        const averageScore = filteredFiles.reduce((sum, file) => sum + file.searchScore, 0) / filteredFiles.length;
+        // Bonus for having more matching files
+        const fileCountBonus = filteredFiles.length * 2;
+        // Bonus for having high-scoring files
+        const maxScore = Math.max(...filteredFiles.map(file => file.searchScore));
+        
+        folderScore = averageScore + fileCountBonus + (maxScore * 0.1);
+      }
+
       return {
         ...pathFile,
-        files: filteredFiles
+        files: filteredFiles,
+        folderScore
       };
-    }).filter(pathFile => pathFile.files.length > 0);
+    })
+    .filter(pathFile => pathFile.files.length > 0)
+    // Sort folders by relevance score (highest first)
+    .sort((a, b) => b.folderScore - a.folderScore);
+
+    return pathFilesWithScores;
   }, [pathFiles, searchTerm]);
 
   const totalFiles = pathFiles.reduce((sum, pathFile) => sum + pathFile.files.length, 0);
@@ -167,10 +186,11 @@ export function Gallery({ active }: GalleryProps) {
     <div className="w-full h-full flex flex-row absolute">
       <SectionWrapper active={active}>
         <div className="w-full h-full flex flex-col p-4">
+
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <FolderIcon className="opacity-50" size={20} />
+              <GalleryVerticalEndIcon className="opacity-50" size={20} />
               <h2 className="text-lg font-medium">Gallery</h2>
               <Badge variant="secondary">{totalFiles} files</Badge>
               {searchTerm && (

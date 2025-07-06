@@ -316,15 +316,15 @@ ipcMain.on('openFile', (event, filePath) => {
 });
 
 ipcMain.handle('addToSoundpad', async (_event, filePath, port) => {
-  const url = `http://localhost:${port}/add`
+  const { addSoundToSoundpad } = require('./helpers/soundpad');
   try {
-    const { data } = await axios.post(url, { path: filePath })
-    return { data }
+    const result = await addSoundToSoundpad(filePath, port);
+    return { data: result };
   } catch (err) {
     // never throw – always resolve with an error shape
-    return { error: err.message ?? 'Soundpad request failed.' }
+    return { error: err.message ?? 'Soundpad request failed.' };
   }
-})
+});
 
 // handle status check from renderer
 ipcMain.handle('get-soundpad-status', async (_event, portArg) => {
