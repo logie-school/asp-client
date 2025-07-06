@@ -36,7 +36,6 @@ const data = {
     {
       title: "advanced",
       items: [
-        { label: "Ports", section: "ports" },
         { label: "Debugging", section: "debugging" },
         { label: "Build Info", section: "buildInfo" },
       ],

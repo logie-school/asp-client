@@ -7,7 +7,7 @@ import {
 import { SectionWrapper } from "../section-wrapper";
 import SettingsAppearance from "./components/settings-sections/appearance/appearance";
 import SettingsDownloads from "./components/settings-sections/downloads/downloads";
-import SettingsPorts from "./components/settings-sections/ports/ports";
+// import SettingsPorts from "./components/settings-sections/ports/ports";
 import SettingsDebugging from "./components/settings-sections/debugging/debugging";
 import SettingsBuildInfo from "./components/settings-sections/build-info/build-info";
 import SoundpadExtension from "./components/settings-sections/soundpad-extension/soundpad-extension"; 
@@ -22,7 +22,7 @@ interface SettingsProps {
 const sectionComponents = {
   appearance: SettingsAppearance,
   downloads: SettingsDownloads,
-  ports: SettingsPorts,
+  // ports: SettingsPorts,
   debugging: SettingsDebugging,
   buildInfo: SettingsBuildInfo,
   soundpadExtension: SoundpadExtension,

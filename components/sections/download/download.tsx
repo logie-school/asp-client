@@ -46,6 +46,16 @@ interface VideoDetails {
   likeCount: number;
   duration: number;
   publishedAt: string;
+  formats: Array<{
+    format_id: string;
+    height?: number;
+    quality: string;
+    ext: string;
+    format_note?: string;
+    vcodec?: string;
+    acodec?: string;
+    abr?: number;
+  }>;
 }
 
 export function Download({ active }: DownloadProps) {
@@ -67,20 +77,13 @@ export function Download({ active }: DownloadProps) {
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "ready" | "downloading" | "complete">("idle");
   const [downloadedPath, setDownloadedPath] = useState<string | null>(null);
+  const [selectedFormatId, setSelectedFormatId] = useState<string | null>(null);
 
   // Get preferences from settings
-  const downloadPreference = settings.main?.quality || 'medium';
   const typePreference = settings.main?.type || 'mp3';
   const previewPreference = settings.main?.preview || 'image';
 
   // Update handlers
-  const handleQualityChange = (value: string) => {
-    updateSettings('main', {
-      ...settings.main,
-      quality: value
-    });
-  };
-
   const handleTypeChange = (value: string) => {
     updateSettings('main', {
       ...settings.main,
@@ -169,6 +172,7 @@ export function Download({ active }: DownloadProps) {
     setVideoUrl(url);
     setImageLoaded(false);
     setDownloadStatus(url ? "loading" : "idle");
+    setSelectedFormatId(null); // Reset selected format when URL changes
 
     if (url && isValidYouTubeUrl(url)) {
       // Clean the URL to remove playlist/list params
@@ -229,6 +233,39 @@ export function Download({ active }: DownloadProps) {
           return;
         }
         if (details && details.title) {
+          console.log('=== FRONTEND FORMAT DEBUG ===');
+          console.log('Received video details:', details);
+          console.log(`Total formats received: ${details.formats ? details.formats.length : 0}`);
+          
+          if (details.formats) {
+            console.log('All formats:');
+            details.formats.forEach((f, i) => {
+              console.log(`  ${i + 1}. ${f.quality} - ID: ${f.format_id} - Height: ${f.height} - Ext: ${f.ext} - VCodec: ${f.vcodec} - Note: "${f.format_note}"`);
+            });
+            
+            const videoFormats = details.formats.filter(f => f.height && f.vcodec);
+            console.log(`Video formats (filtered): ${videoFormats.length}`);
+            videoFormats.forEach((f, i) => {
+              console.log(`  Video ${i + 1}. ${f.quality} - ID: ${f.format_id} - Height: ${f.height}`);
+            });
+            
+            // Check for duplicates by height
+            const heightCounts: Record<number, number> = {};
+            videoFormats.forEach(f => {
+              if (f.height) {
+                heightCounts[f.height] = (heightCounts[f.height] || 0) + 1;
+              }
+            });
+            console.log('Height counts:', heightCounts);
+            const duplicateHeights = Object.entries(heightCounts).filter(([height, count]) => (count as number) > 1);
+            if (duplicateHeights.length > 0) {
+              console.log('🚨 DUPLICATE HEIGHTS DETECTED:', duplicateHeights);
+            } else {
+              console.log('✅ No duplicate heights found');
+            }
+          }
+          console.log('=== END FRONTEND FORMAT DEBUG ===\n');
+          
           setVideoDetails(details);
           setDownloadStatus("ready");
           setVideoTitle(details.title || "Video Title");
@@ -237,6 +274,21 @@ export function Download({ active }: DownloadProps) {
           setDownloadButtonLoading(false); // <--- Add this line
           setDownloadButtonActive(true);
           setInfoButtonActive(true);
+          
+          // Set default format based on type preference
+          if (details.formats && details.formats.length > 0) {
+            if (typePreference === 'mp3') {
+              // For MP3, we don't need to select a specific format, yt-dlp will handle it
+              setSelectedFormatId(null);
+            } else {
+              // For video, find a good quality format (720p if available, otherwise highest)
+              const videoFormats = details.formats.filter(f => f.height && f.vcodec);
+              if (videoFormats.length > 0) {
+                const preferred720p = videoFormats.find(f => f.height === 720);
+                setSelectedFormatId(preferred720p ? preferred720p.format_id : videoFormats[0].format_id);
+              }
+            }
+          }
         } else {
           setDownloadStatus("idle");
           setVideoDetails(null);
@@ -321,6 +373,21 @@ export function Download({ active }: DownloadProps) {
           setDownloadButtonLoading(false);
           setDownloadButtonActive(true);
           setInfoButtonActive(true);
+          
+          // Set default format based on type preference
+          if (details.formats && details.formats.length > 0) {
+            if (typePreference === 'mp3') {
+              // For MP3, we don't need to select a specific format, yt-dlp will handle it
+              setSelectedFormatId(null);
+            } else {
+              // For video, find a good quality format (720p if available, otherwise highest)
+              const videoFormats = details.formats.filter(f => f.height && f.vcodec);
+              if (videoFormats.length > 0) {
+                const preferred720p = videoFormats.find(f => f.height === 720);
+                setSelectedFormatId(preferred720p ? preferred720p.format_id : videoFormats[0].format_id);
+              }
+            }
+          }
 
           // Use the proxied image URL and pass the requestId
           if (details.thumbnail) {
@@ -704,7 +771,7 @@ export function Download({ active }: DownloadProps) {
                   <div className="prefs-item-content">
                     <div className="prefs-title-wrapper">
                       <div className="prefs-item-title !text-foreground">Type</div>
-                      <div className="prefs-item-desc !text-foreground/50">Change the quality of the downloaded video.</div>
+                      <div className="prefs-item-desc !text-foreground/50">Change the type of download.</div>
                     </div>
                     <div className="prefs-item-value">
                       <Select value={typePreference} onValueChange={handleTypeChange}>
@@ -723,29 +790,42 @@ export function Download({ active }: DownloadProps) {
                   </div>
                 </div>
 
-                <div className="prefs-item">
-                  <div className="prefs-item-content">
-                    <div className="prefs-title-wrapper">
-                      <div className="prefs-item-title !text-foreground">Quality</div>
-                      <div className="prefs-item-desc !text-foreground/50">Change the quality of the downloaded video.</div>
-                    </div>
-                    <div className="prefs-item-value">
-                      <Select value={downloadPreference} onValueChange={handleQualityChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Download Quality</SelectLabel>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+{typePreference === 'mp4' && (
+                  <div className="prefs-item">
+                    <div className="prefs-item-content">
+                      <div className="prefs-title-wrapper">
+                        <div className="prefs-item-title !text-foreground">Video Quality</div>
+                        <div className="prefs-item-desc !text-foreground/50">Select the video quality for download.</div>
+                      </div>
+                      <div className="prefs-item-value">
+                        <Select 
+                          value={selectedFormatId || ""} 
+                          onValueChange={setSelectedFormatId}
+                          disabled={!videoDetails || !videoDetails.formats || videoDetails.formats.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={videoDetails ? "Select quality" : "Load video first"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Available Video Qualities</SelectLabel>
+                              {videoDetails && videoDetails.formats && (
+                                // Show video formats for MP4 only
+                                videoDetails.formats
+                                  .filter(f => f.height && f.vcodec)
+                                  .map((format) => (
+                                    <SelectItem key={format.format_id} value={format.format_id}>
+                                      {format.quality}
+                                    </SelectItem>
+                                  ))
+                              )}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {!settings.downloads.useTempPath && (
                   <div className="prefs-item">
@@ -971,7 +1051,7 @@ export function Download({ active }: DownloadProps) {
                           videoUrl,
                           outputPath,
                           settings.main?.type || 'mp3',
-                          settings.main?.quality || 'medium',
+                          selectedFormatId,
                           settings.downloads?.useTempPath 
                         );
                       } else {

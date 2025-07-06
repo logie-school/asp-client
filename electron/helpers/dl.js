@@ -168,6 +168,138 @@ async function getVideoDetails(url) {
                         try {
                             const info = JSON.parse(stdout);
                             console.log('Successfully got video details');
+                            
+                            // Extract available formats
+                            const formats = [];
+                            if (info.formats && Array.isArray(info.formats)) {
+                                console.log('Raw formats count:', info.formats.length);
+                                
+                                // Get video formats with height info
+                                const videoFormats = info.formats
+                                    .filter(f => f.height && f.vcodec !== 'none')
+                                    .map(f => ({
+                                        format_id: f.format_id,
+                                        height: f.height,
+                                        quality: `${f.height}p`,
+                                        ext: f.ext || 'mp4',
+                                        format_note: f.format_note || '',
+                                        vcodec: f.vcodec,
+                                        acodec: f.acodec,
+                                        fps: f.fps || 30,
+                                        tbr: f.tbr || 0, // total bitrate
+                                        vbr: f.vbr || 0, // video bitrate
+                                        preference: f.preference || 0,
+                                        has_audio: f.acodec && f.acodec !== 'none',
+                                        protocol: f.protocol || '',
+                                        filesize: f.filesize || 0
+                                    }));
+                                
+                                console.log('Filtered video formats count:', videoFormats.length);
+                                console.log('Video formats by height:');
+                                videoFormats.forEach(f => {
+                                    console.log(`  ${f.height}p - ID: ${f.format_id}, TBR: ${f.tbr}, VBR: ${f.vbr}, Audio: ${f.has_audio}, ACodec: ${f.acodec}, Pref: ${f.preference}`);
+                                });
+                                
+                                // Group formats by height
+                                const formatsByHeight = {};
+                                videoFormats.forEach(format => {
+                                    if (!formatsByHeight[format.height]) {
+                                        formatsByHeight[format.height] = [];
+                                    }
+                                    formatsByHeight[format.height].push(format);
+                                });
+                                
+                                console.log('Grouped formats by height:');
+                                Object.keys(formatsByHeight).forEach(height => {
+                                    console.log(`  ${height}p: ${formatsByHeight[height].length} formats`);
+                                });
+                                
+                                // Select the best format for each height
+                                const uniqueVideoFormats = [];
+                                Object.keys(formatsByHeight).forEach(height => {
+                                    const formatsForHeight = formatsByHeight[height];
+                                    console.log(`\nProcessing ${height}p formats (${formatsForHeight.length} available):`);
+                                    
+                                    formatsForHeight.forEach((f, i) => {
+                                        console.log(`  [${i}] ID: ${f.format_id}, TBR: ${f.tbr}, VBR: ${f.vbr}, Audio: ${f.has_audio}, ACodec: ${f.acodec}, Pref: ${f.preference}`);
+                                    });
+                                    
+                                    // Sort by priority: audio codec preference, combined formats, then by bitrate, then by preference
+                                    const bestFormat = formatsForHeight.sort((a, b) => {
+                                        // First, prioritize better audio codecs (AAC > MP3 > Opus > others)
+                                        const getAudioCodecScore = (acodec) => {
+                                            if (!acodec || acodec === 'none') return 0;
+                                            if (acodec.includes('aac')) return 4;
+                                            if (acodec.includes('mp3')) return 3;
+                                            if (acodec.includes('mp4a')) return 4; // MP4 audio
+                                            if (acodec.includes('opus')) return 2;
+                                            return 1; // other codecs
+                                        };
+                                        
+                                        const aAudioScore = getAudioCodecScore(a.acodec);
+                                        const bAudioScore = getAudioCodecScore(b.acodec);
+                                        
+                                        if (aAudioScore !== bAudioScore) {
+                                            return bAudioScore - aAudioScore;
+                                        }
+                                        
+                                        // Then prioritize combined formats (has both video and audio)
+                                        if (a.has_audio !== b.has_audio) {
+                                            return b.has_audio ? 1 : -1;
+                                        }
+                                        
+                                        // Then by total bitrate
+                                        if (a.tbr !== b.tbr) {
+                                            return b.tbr - a.tbr;
+                                        }
+                                        // Then by video bitrate
+                                        if (a.vbr !== b.vbr) {
+                                            return b.vbr - a.vbr;
+                                        }
+                                        // Then by preference
+                                        if (a.preference !== b.preference) {
+                                            return b.preference - a.preference;
+                                        }
+                                        // Finally by filesize
+                                        return b.filesize - a.filesize;
+                                    })[0];
+                                    
+                                    console.log(`  SELECTED: ID: ${bestFormat.format_id}, TBR: ${bestFormat.tbr}, VBR: ${bestFormat.vbr}, Audio: ${bestFormat.has_audio}, ACodec: ${bestFormat.acodec}`);
+                                    
+                                    uniqueVideoFormats.push({
+                                        format_id: bestFormat.format_id,
+                                        height: bestFormat.height,
+                                        quality: bestFormat.quality,
+                                        ext: bestFormat.ext,
+                                        format_note: bestFormat.format_note,
+                                        vcodec: bestFormat.vcodec,
+                                        acodec: bestFormat.acodec
+                                    });
+                                });
+                                
+                                // Sort final results by height descending
+                                uniqueVideoFormats.sort((a, b) => b.height - a.height);
+                                
+                                console.log('\nFinal unique video formats:');
+                                uniqueVideoFormats.forEach(f => {
+                                    console.log(`  ${f.quality} - ID: ${f.format_id}`);
+                                });
+                                
+                                // Get audio-only formats
+                                const audioFormats = info.formats
+                                    .filter(f => f.acodec !== 'none' && f.vcodec === 'none')
+                                    .map(f => ({
+                                        format_id: f.format_id,
+                                        quality: f.format_note || 'audio',
+                                        ext: f.ext || 'mp3',
+                                        abr: f.abr || 128,
+                                        acodec: f.acodec
+                                    }));
+                                
+                                formats.push(...uniqueVideoFormats, ...audioFormats);
+                                console.log('Total formats being returned:', formats.length);
+                            }
+                            
                             resolve({
                                 title: info.title || 'Untitled Video',
                                 description: info.description || '',
@@ -180,6 +312,7 @@ async function getVideoDetails(url) {
                                 likeCount: info.like_count || 0,
                                 duration: info.duration || 0,
                                 publishedAt: info.upload_date || '',
+                                formats: formats
                             });
                         } catch (error) {
                             console.error('Failed to parse yt-dlp output:', error);
@@ -204,6 +337,138 @@ async function getVideoDetails(url) {
         const info = await ytdlp(url, options);
         
         console.log('Successfully got video details');
+        
+        // Extract available formats
+        const formats = [];
+        if (info.formats && Array.isArray(info.formats)) {
+            console.log('Raw formats count:', info.formats.length);
+            
+            // Get video formats with height info
+            const videoFormats = info.formats
+                .filter(f => f.height && f.vcodec !== 'none')
+                .map(f => ({
+                    format_id: f.format_id,
+                    height: f.height,
+                    quality: `${f.height}p`,
+                    ext: f.ext || 'mp4',
+                    format_note: f.format_note || '',
+                    vcodec: f.vcodec,
+                    acodec: f.acodec,
+                    fps: f.fps || 30,
+                    tbr: f.tbr || 0, // total bitrate
+                    vbr: f.vbr || 0, // video bitrate
+                    preference: f.preference || 0,
+                    has_audio: f.acodec && f.acodec !== 'none',
+                    protocol: f.protocol || '',
+                    filesize: f.filesize || 0
+                }));
+            
+            console.log('Filtered video formats count:', videoFormats.length);
+            console.log('Video formats by height:');
+            videoFormats.forEach(f => {
+                console.log(`  ${f.height}p - ID: ${f.format_id}, TBR: ${f.tbr}, VBR: ${f.vbr}, Audio: ${f.has_audio}, ACodec: ${f.acodec}, Pref: ${f.preference}`);
+            });
+            
+            // Group formats by height
+            const formatsByHeight = {};
+            videoFormats.forEach(format => {
+                if (!formatsByHeight[format.height]) {
+                    formatsByHeight[format.height] = [];
+                }
+                formatsByHeight[format.height].push(format);
+            });
+            
+            console.log('Grouped formats by height:');
+            Object.keys(formatsByHeight).forEach(height => {
+                console.log(`  ${height}p: ${formatsByHeight[height].length} formats`);
+            });
+            
+            // Select the best format for each height
+            const uniqueVideoFormats = [];
+            Object.keys(formatsByHeight).forEach(height => {
+                const formatsForHeight = formatsByHeight[height];
+                console.log(`\nProcessing ${height}p formats (${formatsForHeight.length} available):`);
+                
+                formatsForHeight.forEach((f, i) => {
+                    console.log(`  [${i}] ID: ${f.format_id}, TBR: ${f.tbr}, VBR: ${f.vbr}, Audio: ${f.has_audio}, ACodec: ${f.acodec}, Pref: ${f.preference}`);
+                });
+                
+                // Sort by priority: audio codec preference, combined formats, then by bitrate, then by preference
+                const bestFormat = formatsForHeight.sort((a, b) => {
+                    // First, prioritize better audio codecs (AAC > MP3 > Opus > others)
+                    const getAudioCodecScore = (acodec) => {
+                        if (!acodec || acodec === 'none') return 0;
+                        if (acodec.includes('aac')) return 4;
+                        if (acodec.includes('mp3')) return 3;
+                        if (acodec.includes('mp4a')) return 4; // MP4 audio
+                        if (acodec.includes('opus')) return 2;
+                        return 1; // other codecs
+                    };
+                    
+                    const aAudioScore = getAudioCodecScore(a.acodec);
+                    const bAudioScore = getAudioCodecScore(b.acodec);
+                    
+                    if (aAudioScore !== bAudioScore) {
+                        return bAudioScore - aAudioScore;
+                    }
+                    
+                    // Then prioritize combined formats (has both video and audio)
+                    if (a.has_audio !== b.has_audio) {
+                        return b.has_audio ? 1 : -1;
+                    }
+                    
+                    // Then by total bitrate
+                    if (a.tbr !== b.tbr) {
+                        return b.tbr - a.tbr;
+                    }
+                    // Then by video bitrate
+                    if (a.vbr !== b.vbr) {
+                        return b.vbr - a.vbr;
+                    }
+                    // Then by preference
+                    if (a.preference !== b.preference) {
+                        return b.preference - a.preference;
+                    }
+                    // Finally by filesize
+                    return b.filesize - a.filesize;
+                })[0];
+                
+                console.log(`  SELECTED: ID: ${bestFormat.format_id}, TBR: ${bestFormat.tbr}, VBR: ${bestFormat.vbr}, Audio: ${bestFormat.has_audio}, ACodec: ${bestFormat.acodec}`);
+                
+                uniqueVideoFormats.push({
+                    format_id: bestFormat.format_id,
+                    height: bestFormat.height,
+                    quality: bestFormat.quality,
+                    ext: bestFormat.ext,
+                    format_note: bestFormat.format_note,
+                    vcodec: bestFormat.vcodec,
+                    acodec: bestFormat.acodec
+                });
+            });
+            
+            // Sort final results by height descending
+            uniqueVideoFormats.sort((a, b) => b.height - a.height);
+            
+            console.log('\nFinal unique video formats:');
+            uniqueVideoFormats.forEach(f => {
+                console.log(`  ${f.quality} - ID: ${f.format_id}`);
+            });
+            
+            // Get audio-only formats
+            const audioFormats = info.formats
+                .filter(f => f.acodec !== 'none' && f.vcodec === 'none')
+                .map(f => ({
+                    format_id: f.format_id,
+                    quality: f.format_note || 'audio',
+                    ext: f.ext || 'mp3',
+                    abr: f.abr || 128,
+                    acodec: f.acodec
+                }));
+            
+            formats.push(...uniqueVideoFormats, ...audioFormats);
+            console.log('Total formats being returned:', formats.length);
+        }
+        
         return {
             title: info.title || 'Untitled Video',
             description: info.description || '',
@@ -216,6 +481,7 @@ async function getVideoDetails(url) {
             likeCount: info.like_count || 0,
             duration: info.duration || 0,
             publishedAt: info.upload_date || '',
+            formats: formats
         };
     } catch (error) {
         console.error('Error in getVideoDetails:', error);
@@ -223,33 +489,49 @@ async function getVideoDetails(url) {
     }
 }
 
-async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium') {
-    // Using simplified format selectors that work better with YouTube's changes
-    const qualityOptions = {
-        low: {
-            format: format === 'mp3' 
-                ? 'bestaudio'
-                : 'worstvideo[height>=360]+bestaudio/worst[height>=360]/best'
-        },
-        medium: {
-            format: format === 'mp3' 
-                ? 'bestaudio'
-                : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best'
-        },
-        high: {
-            format: format === 'mp3' 
-                ? 'bestaudio'
-                : 'bestvideo+bestaudio/best' // Better format string for highest quality
-        }
-    };
-
-    const preset = qualityOptions[quality] || qualityOptions.medium;
+async function downloadVideo(url, outputPath, format = 'mp4', formatId = null) {
     const ffmpegPath = getFfmpegPath();
     const ytdlpPath = getYtDlpPath();
 
-    console.log(`Downloading with format: ${format}, quality: ${quality}`);
+    console.log(`Downloading with format: ${format}, formatId: ${formatId}`);
     console.log(`Using ffmpeg at: ${ffmpegPath}`);
     console.log(`Using yt-dlp at: ${ytdlpPath}`);
+
+    // Determine the format selector based on input
+    let formatSelector;
+    if (formatId) {
+        // Use specific format ID if provided
+        if (format === 'mp3') {
+            // For audio downloads, we still want best audio even if a video format ID is provided
+            formatSelector = 'bestaudio';
+        } else {
+            // For video downloads, try to get video-only format and add best compatible audio
+            formatSelector = `${formatId}+bestaudio[acodec^=mp4a]/best[format_id=${formatId}]+bestaudio[acodec^=aac]/${formatId}+bestaudio`;
+        }
+    } else {
+        // Fallback to generic quality options if no specific format ID
+        const qualityOptions = {
+            low: {
+                format: format === 'mp3' 
+                    ? 'bestaudio'
+                    : 'worstvideo[height>=360]+bestaudio/worst[height>=360]/best'
+            },
+            medium: {
+                format: format === 'mp3' 
+                    ? 'bestaudio'
+                    : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best'
+            },
+            high: {
+                format: format === 'mp3' 
+                    ? 'bestaudio'
+                    : 'bestvideo+bestaudio/best'
+            }
+        };
+        const preset = qualityOptions.medium;
+        formatSelector = preset.format;
+    }
+
+    console.log(`Using format selector: ${formatSelector}`);
 
     // Verify files exist in production
     if (app.isPackaged) {
@@ -319,9 +601,27 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
                         args.push('--extract-audio');
                         args.push('--audio-format', 'mp3');
                         args.push('--audio-quality', '0');
+                        args.push('--format', formatSelector);
                     } else {
-                        args.push('--format', 'best');
+                        args.push('--format', formatSelector);
                         args.push('--recode-video', 'mp4');
+                        // Progressive audio conversion strategies based on attempt
+                        if (fs.existsSync(ffmpegPath)) {
+                            if (attempt === 1) {
+                                console.log('Attempt 1: Using maximally compatible encoding (baseline H.264, stereo AAC)');
+                                args.push('--postprocessor-args', 'ffmpeg:-c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -movflags +faststart -c:a aac -ac 2 -ar 44100 -b:a 128k');
+                                args.push('--audio-format', 'aac');
+                            } else if (attempt === 2) {
+                                console.log('Attempt 2: Using simpler AAC conversion with basic H.264');
+                                args.push('--postprocessor-args', 'ffmpeg:-c:v libx264 -profile:v main -pix_fmt yuv420p -c:a aac -ac 2 -b:a 128k');
+                                args.push('--audio-format', 'aac');
+                            } else {
+                                console.log('Attempt 3: Using basic audio format conversion only');
+                                args.push('--audio-format', 'aac');
+                            }
+                        } else {
+                            console.warn('ffmpeg not found, cannot convert audio codec');
+                        }
                     }
                     
                     console.log(`Command: ${ytdlpPath} ${args.join(' ')}`);
@@ -423,6 +723,8 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
             const maxAttempts = 3;
             
             while (attempt <= maxAttempts) {
+                console.log(`Development download attempt ${attempt}/${maxAttempts}`);
+                
                 try {
                     const options = {
                         output: tempOutput,
@@ -440,9 +742,29 @@ async function downloadVideo(url, outputPath, format = 'mp4', quality = 'medium'
                         options.extractAudio = true;
                         options.audioFormat = 'mp3';
                         options.audioQuality = 0;
+                        options.format = formatSelector;
                     } else {
-                        options.format = 'best';
-                        options.remuxVideo = 'mp4';
+                        options.format = formatSelector;
+                        options.recodeVideo = 'mp4';
+                        // Force AAC audio codec with Windows-compatible settings for MP4 files
+                        if (fs.existsSync(ffmpegPath)) {
+                            if (attempt === 1) {
+                                console.log('Attempt 1: Using maximally compatible encoding for Windows Media Player');
+                                // Use baseline H.264 profile which is most compatible, plus faststart for web/streaming compatibility
+                                options.postprocessorArgs = 'ffmpeg:-c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -movflags +faststart -c:a aac -ac 2 -ar 44100 -b:a 128k';
+                                options.audioFormat = 'aac';
+                            } else if (attempt === 2) {
+                                console.log('Attempt 2: Using simpler compatible encoding');
+                                options.postprocessorArgs = 'ffmpeg:-c:v libx264 -profile:v main -pix_fmt yuv420p -c:a aac -ac 2 -b:a 128k';
+                                options.audioFormat = 'aac';
+                            } else {
+                                console.log('Attempt 3: Using basic audio conversion only');
+                                options.audioFormat = 'aac';
+                                delete options.postprocessorArgs;
+                            }
+                        } else {
+                            console.warn('ffmpeg not found, cannot convert audio codec');
+                        }
                     }
                     
                     console.log(`Download attempt ${attempt}/${maxAttempts} with options:`, options);

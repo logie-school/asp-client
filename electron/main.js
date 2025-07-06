@@ -189,7 +189,7 @@ ipcMain.on('videoInfo', async (event, url, requestId) => {
   }
 });
 
-ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality, useTempPath) => {
+ipcMain.on('downloadVideo', async (event, url, outputPath, format, formatId, useTempPath) => {
   const { downloadVideo } = require('./helpers/dl.js');
   try {
     let finalOutputPath = outputPath;
@@ -204,7 +204,7 @@ ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality, useT
       finalOutputPath = tempDir;
 
       // Download to temp folder first
-      result = await downloadVideo(url, finalOutputPath, format, quality);
+      result = await downloadVideo(url, finalOutputPath, format, formatId);
 
       // Prompt user for file save location (Save As dialog)
       const { dialog } = require('electron');
@@ -236,7 +236,7 @@ ipcMain.on('downloadVideo', async (event, url, outputPath, format, quality, useT
       }
     } else {
       // Normal download
-      result = await downloadVideo(url, finalOutputPath, format, quality);
+      result = await downloadVideo(url, finalOutputPath, format, formatId);
       event.reply('downloadResponse', result);
     }
   } catch (error) {

@@ -120,7 +120,7 @@ export function PathList({ paths, onRemove, onRename }: PathListProps) {
             paths.map((item, idx) => (
               <TableRow key={idx} className="text-foreground/50">
                 <TableCell>
-                  <Tooltip disableHoverableContent>
+                  <Tooltip>
                     <TooltipTrigger asChild>
                         {statuses[idx] === true ? (
                           <CheckIcon size={16} className="text-green-500" />
