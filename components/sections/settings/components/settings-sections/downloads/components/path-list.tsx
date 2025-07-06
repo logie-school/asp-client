@@ -161,11 +161,13 @@ export function PathList({ paths, onRemove, onRename }: PathListProps) {
                         <PencilIcon />
                         Rename
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                        window.api?.invoke?.('open-path', item.path);
-                      }}>
-                        <FolderOpenIcon /> Open in Explorer
-                      </DropdownMenuItem>
+                      {statuses[idx] === true && (
+                        <DropdownMenuItem onClick={() => {
+                          window.api?.invoke?.('open-path', item.path);
+                        }}>
+                          <FolderOpenIcon /> Open in Explorer
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         className="group hover:!bg-red-500/10"
                         onClick={() => onRemove(idx)}

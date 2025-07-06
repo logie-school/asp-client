@@ -249,6 +249,66 @@ ipcMain.handle('open-folder-dialog', async () => await openFolderDialog());
 ipcMain.handle('validate-path', async (event, folderPath) => validatePath(folderPath));
 ipcMain.handle('open-download-folder', async (event, folderPath) => openFolder(folderPath));
 
+ipcMain.handle('list-files-in-path', async (event, folderPath) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    // Expand ~ to home directory
+    let expandedPath = folderPath;
+    if (folderPath.startsWith('~')) {
+      expandedPath = path.join(os.homedir(), folderPath.slice(1));
+    }
+    
+    // Check if path exists
+    if (!fs.existsSync(expandedPath)) {
+      return { error: 'Path does not exist' };
+    }
+    
+    // Check if it's a directory
+    const stats = fs.lstatSync(expandedPath);
+    if (!stats.isDirectory()) {
+      return { error: 'Path is not a directory' };
+    }
+    
+    // Read directory contents
+    const files = fs.readdirSync(expandedPath);
+    const fileList = [];
+    
+    // Filter for audio and video files and get their info
+    const audioExtensions = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.wma'];
+    const videoExtensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'];
+    
+    for (const file of files) {
+      const filePath = path.join(expandedPath, file);
+      try {
+        const fileStats = fs.lstatSync(filePath);
+        if (fileStats.isFile()) {
+          const ext = path.extname(file).toLowerCase();
+          if (audioExtensions.includes(ext) || videoExtensions.includes(ext)) {
+            fileList.push({
+              name: path.parse(file).name,
+              fullName: file,
+              extension: ext,
+              type: audioExtensions.includes(ext) ? 'audio' : 'video',
+              size: fileStats.size,
+              modified: fileStats.mtime,
+              path: filePath
+            });
+          }
+        }
+      } catch (err) {
+        // Skip files that can't be accessed
+        continue;
+      }
+    }
+    
+    return { files: fileList };
+  } catch (error) {
+    return { error: error.message };
+  }
+});
+
 ipcMain.on('openFile', (event, filePath) => {
   if (filePath) {
     shell.showItemInFolder(filePath);
